@@ -133,4 +133,58 @@ public class WarmPlanTests
             Directory.Delete(game, true);
         }
     }
+
+    // `victory.exe --help` and `warm --help` of AnyXboxX at 37d4686, as printed (descriptions shortened).
+    private const string CombinedBaseHelp =
+        "Run an Xbox Series title natively on Windows\n\nUsage: victory.exe <COMMAND>\n\nCommands:\n" +
+        "  inspect      Summarise one PE image\n  census       Aggregate the imports\n" +
+        "  lib-exports  List the `dll!export` pairs\n  shader-info  Find shader containers\n" +
+        "  translate    Run every shader found\n  shaders      Translate every shader found\n" +
+        "  warm         Make the host pipelines of every pipeline the title ever created\n" +
+        "  run          Prepare, map and bind a title executable\n  config       Show the resolved configuration\n" +
+        "  help         Print this message or the help of the given subcommand(s)\n\n" +
+        "Options:\n  -h, --help     Print help\n  -V, --version  Print version";
+
+    private const string CombinedBaseWarmHelp =
+        "Usage: victory.exe warm [OPTIONS]\n\nOptions:\n" +
+        "      --jobs <JOBS>    Processes at once (default: two thirds of the logical cores)\n" +
+        "      --limit <LIMIT>  At most this many pipelines\n      --again          Those made before too\n" +
+        "      --used           Only the pipelines earlier runs drew with\n  -h, --help           Print help";
+
+    [Fact]
+    public void AnyXboxX_on_its_combined_base_translates_shaders_first() =>
+        Assert.Equal(WarmKind.ShadersThenPipelines,
+            WarmPlan.Detect(CombinedBaseHelp, CombinedBaseWarmHelp, TranslateWithCache));
+
+    // A checkout from before that base, which the window offers to carry on with, keeps its old warmup.
+    [Theory]
+    [InlineData(WarmKind.GameFolder, true, WarmKind.GameFiles)]
+    [InlineData(WarmKind.GameFolder, false, WarmKind.GameFolder)]
+    [InlineData(WarmKind.ShadersThenPipelines, true, WarmKind.ShadersThenPipelines)]
+    [InlineData(WarmKind.None, true, WarmKind.None)]
+    public void A_fork_that_warms_every_game_file_keeps_its_old_way(WarmKind detected, bool everyFile, WarmKind kind) =>
+        Assert.Equal(kind, WarmPlan.Refine(detected, everyFile));
+
+    [Fact]
+    public void The_shader_step_can_be_given_every_game_file()
+    {
+        var game = Directory.CreateTempSubdirectory("anyx-warm-").FullName;
+        try
+        {
+            foreach (var name in (string[])["shaders.rpf", "anim.rpf", "game_scarlett_master.exe",
+                         "XboxBvhBuilder.dll", "amd_fidelityfx_upscaler_xbox.dll", "other.dll"])
+                File.WriteAllText(Path.Combine(game, name), "x");
+            string In(string name) => Path.Combine(game, name);
+
+            var steps = WarmPlan.Steps(WarmKind.ShadersThenPipelines, game, everyGameFile: true);
+
+            Assert.Equal(
+                [["shaders", In("anim.rpf"), In("shaders.rpf"), In("game_scarlett_master.exe"),
+                    In("XboxBvhBuilder.dll"), In("amd_fidelityfx_upscaler_xbox.dll")], ["warm", "--used"]], steps);
+        }
+        finally
+        {
+            Directory.Delete(game, true);
+        }
+    }
 }

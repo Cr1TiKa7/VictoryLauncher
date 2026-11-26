@@ -21,7 +21,7 @@ Games, Take-Two or Microsoft, nor with the authors of the forks.
 
 | Fork | Warmup | Settings |
 |------|--------|----------|
-| [AnyXboxX](https://github.com/LooperSalty/AnyXboxX) | yes, with a percentage | from `crates\anyxboxx\src\run\settings.rs`, they follow the updates |
+| [AnyXboxX](https://github.com/LooperSalty/AnyXboxX) | yes (`shaders` with every archive and binary of the game, then `warm --used`) | from `crates\anyxboxx\src\run\settings.rs`, they follow the updates |
 | [klbf-lab](https://github.com/PastiiJay/klbf-lab) | yes (`translate`) | from the README of the fork, without the Series S profile |
 | [Vice-Tay](https://github.com/TaynanGT/Vice-Tay) | yes (`shaders`, then `warm --used`) | from its `play.ps1` (NVIDIA) |
 | [VIctory-7900XTX](https://github.com/avatarmanz/VIctory-7900XTX) | yes (`shaders`, then `warm --used`) | from its `play.ps1`, tuned for AMD |
@@ -30,7 +30,7 @@ Games, Take-Two or Microsoft, nor with the authors of the forks.
 | [victory-fork](https://github.com/fxceless/victory-fork) | no | `VICTORY_TEXTURE_BACK=1` |
 | [VIctory (DexNom)](https://github.com/DexNom/VIctory) | yes (`warm`) | its experimental NVIDIA mode (ray tracing and FSR off), developed for AMD |
 
-Except for AnyXboxX, the launcher reads the kind of warmup from the help of the built program. There is also
+The launcher reads the kind of warmup from the help of the built program. There is also
 "Own Git URL …" (`https://` only, a layout with `apps\victory` in the root or below `third_party\victory`, no special
 settings).
 

@@ -6,7 +6,10 @@ namespace VictoryLauncher.Core;
 public enum WarmKind
 {
     None,
-    /// <summary>`warm` with every archive and binary of the game; reports progress the launcher can read.</summary>
+    /// <summary>
+    /// `warm` with every archive and binary of the game; reports progress the launcher can read. AnyXboxX until its
+    /// combined base (04a08f5).
+    /// </summary>
     GameFiles,
     /// <summary>`warm` with the game folder.</summary>
     GameFolder,
@@ -65,15 +68,24 @@ public static class WarmPlan
             : WarmKind.None;
     }
 
+    /// <returns>The kind for a fork whose warmup takes every game file, otherwise the detected one.</returns>
+    public static WarmKind Refine(WarmKind detected, bool everyGameFile) =>
+        everyGameFile && detected == WarmKind.GameFolder ? WarmKind.GameFiles : detected;
+
+    /// <param name="everyGameFile">The `shaders` step gets every archive and binary, not only the shader pack.</param>
     /// <returns>The argument lists to run one after another.</returns>
-    public static IReadOnlyList<IReadOnlyList<string>> Steps(WarmKind kind, string gameDir)
+    public static IReadOnlyList<IReadOnlyList<string>> Steps(WarmKind kind, string gameDir, bool everyGameFile = false)
     {
         var shaderPack = Path.Combine(gameDir, ShaderPackName);
         return kind switch
         {
             WarmKind.GameFiles => [["warm", .. WarmInputs.Collect(gameDir)]],
             WarmKind.GameFolder => [["warm", gameDir]],
-            WarmKind.ShadersThenPipelines => [["shaders", shaderPack], ["warm", "--used"]],
+            WarmKind.ShadersThenPipelines =>
+            [
+                ["shaders", .. everyGameFile ? WarmInputs.Collect(gameDir) : [shaderPack]],
+                ["warm", "--used"],
+            ],
             WarmKind.ShaderPack => [["translate", "--cache", "--pipelines", "--jobs", "8", shaderPack]],
             _ => [],
         };
