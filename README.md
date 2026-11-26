@@ -6,6 +6,8 @@ Ein Windows-Launcher für die Forks der VIctory-Familie: Fork wählen, auschecke
 Spieldateien sind nicht enthalten, du brauchst deine eigenen, rechtmäßig erworbenen. Das Projekt gehört weder zu
 Rockstar Games, Take-Two oder Microsoft noch zu den Autoren der Forks.
 
+![Das Fenster des VictoryLaunchers: Fork-Auswahl, Ordner, Warmup und der Knopf „Spiel starten“](docs/screenshot.png)
+
 ## Voraussetzungen
 
 - Windows x64
