@@ -22,13 +22,13 @@ Games, Take-Two or Microsoft, nor with the authors of the forks.
 | Fork | Warmup | Settings |
 |------|--------|----------|
 | [AnyXboxX](https://github.com/LooperSalty/AnyXboxX) | yes, with a percentage | from `crates\anyxboxx\src\run\settings.rs`, they follow the updates |
-| [klbf-lab](https://github.com/PastiiJay/klbf-lab) | yes (`translate`) | from the README of the fork, without the Series S profile |
-| [Vice-Tay](https://github.com/TaynanGT/Vice-Tay) | yes (`shaders`, then `warm --used`) | from its `play.ps1` (NVIDIA) |
-| [VIctory-7900XTX](https://github.com/avatarmanz/VIctory-7900XTX) | yes (`shaders`, then `warm --used`) | from its `play.ps1`, tuned for AMD |
-| [kelvaroq](https://github.com/fablinoo/kelvaroq) | detected after the build | the tier for 10 GB |
-| [VItoriaBr](https://github.com/uiliannn/VItoriaBr) | yes (`warm`) | its preset for 8 GB |
+| [klbf-lab](https://github.com/PastiiJay/klbf-lab) | yes (`translate`), with a percentage | from the README of the fork, without the Series S profile |
+| [Vice-Tay](https://github.com/TaynanGT/Vice-Tay) | yes (`shaders`: a count, from the second time a percentage; the pipeline step has nothing to build yet) | from its `play.ps1` (NVIDIA) |
+| [VIctory-7900XTX](https://github.com/avatarmanz/VIctory-7900XTX) | yes (`shaders`: a count, from the second time a percentage; the pipeline step has nothing to build yet) | from its `play.ps1`, tuned for AMD |
+| [kelvaroq](https://github.com/fablinoo/kelvaroq) | yes (`precompile`): the pipelines of earlier game runs, with a percentage | the tier for 10 GB |
+| [VItoriaBr](https://github.com/uiliannn/VItoriaBr) | yes (`warm`), without a percentage | its preset for 8 GB |
 | [victory-fork](https://github.com/fxceless/victory-fork) | no | `VICTORY_TEXTURE_BACK=1` |
-| [VIctory (DexNom)](https://github.com/DexNom/VIctory) | yes (`warm`) | its experimental NVIDIA mode (ray tracing and FSR off), developed for AMD |
+| [VIctory (DexNom)](https://github.com/DexNom/VIctory) | yes (`warm`), with a percentage | its experimental NVIDIA mode (ray tracing and FSR off), developed for AMD |
 
 Except for AnyXboxX, the launcher reads the kind of warmup from the help of the built program. There is also
 "Own Git URL …" (`https://` only, a layout with `apps\victory` in the root or below `third_party\victory`, no special
@@ -47,7 +47,11 @@ fork allows it. The launcher cannot tell whether a fork shows a picture on your 
 - **Game folder:** The launcher writes nothing into it.
 - **Program check:** Before the game starts, it lists programs that use video memory or CPU. Nothing is ticked in
   advance. Ticked programs are closed normally; whatever keeps running is only force closed after a second question.
-- **Driver cache:** It does not manage the shader cache of the graphics driver.
+- **Warmup progress:** It is read from the lines the fork prints. For all forks except AnyXboxX it was written from
+  their sources and has not been tried against the running program. If the lines do not match, you see the last line of
+  the output instead (kelvaroq reports the warmup as incomplete then).
+- **Driver cache:** It does not manage the shader cache of the graphics driver. What the pipeline step of Vice-Tay and
+  VIctory-7900XTX builds is only kept there.
 
 ## Keyboard controls
 
