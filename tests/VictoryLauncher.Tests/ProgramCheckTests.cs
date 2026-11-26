@@ -19,9 +19,9 @@ public class ProgramCheckTests
         ProgramCheck.Select(processes, ownSession: 1, freeRam, Windows);
 
     [Theory]
-    [InlineData(500, "Videospeicher hoch")]
-    [InlineData(400, "Videospeicher hoch")]
-    [InlineData(60, "Videospeicher mittel")]
+    [InlineData(500, "high video memory")]
+    [InlineData(400, "high video memory")]
+    [InlineData(60, "medium video memory")]
     public void Lists_a_program_that_holds_video_memory(int mb, string reason)
     {
         var found = Assert.Single(Select(PlentyOfRam, Process("game", vramMb: mb)));
@@ -35,13 +35,13 @@ public class ProgramCheckTests
 
     [Fact]
     public void Lists_a_program_that_keeps_the_processor_busy() =>
-        Assert.Equal("CPU aktiv", Assert.Single(Select(PlentyOfRam, Process("busy", cpu: 2))).Reason);
+        Assert.Equal("busy CPU", Assert.Single(Select(PlentyOfRam, Process("busy", cpu: 2))).Reason);
 
     [Fact]
     public void Memory_counts_only_when_it_is_getting_tight()
     {
         Assert.Empty(Select(PlentyOfRam, Process("editor", privateMb: 500)));
-        Assert.Equal("viel Arbeitsspeicher", Assert.Single(Select(LittleRam, Process("editor", privateMb: 500))).Reason);
+        Assert.Equal("high RAM use", Assert.Single(Select(LittleRam, Process("editor", privateMb: 500))).Reason);
         Assert.Empty(Select(LittleRam, Process("editor", privateMb: 499)));
     }
 
@@ -53,7 +53,7 @@ public class ProgramCheckTests
 
         Assert.Equal(60 * Mb, found.VramBytes);
         Assert.Equal(3, found.Processes.Count);
-        Assert.Equal("Videospeicher mittel, CPU aktiv", found.Reason);
+        Assert.Equal("medium video memory, busy CPU", found.Reason);
     }
 
     [Fact]

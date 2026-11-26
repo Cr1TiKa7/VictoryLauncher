@@ -69,7 +69,7 @@ public class ForkCheckoutTests : IDisposable
 
         var problem = await Ensure(target, "https://github.com/somebody/else");
 
-        Assert.Contains("anderes Repository", problem);
+        Assert.Contains("different repository", problem);
     }
 
     [Fact]
@@ -81,7 +81,7 @@ public class ForkCheckoutTests : IDisposable
 
         var problem = await Ensure(target);
 
-        Assert.Contains("nicht leer", problem);
+        Assert.Contains("not empty", problem);
         Assert.Equal("photo.jpg", Path.GetFileName(Assert.Single(Directory.GetFileSystemEntries(target))));
     }
 
@@ -92,7 +92,7 @@ public class ForkCheckoutTests : IDisposable
 
         var problem = await Ensure(target, Folder("no-such-origin"));
 
-        Assert.Contains("Auschecken fehlgeschlagen", problem);
+        Assert.Contains("Checkout failed", problem);
         Assert.False(Directory.Exists(target));
         Assert.Empty(Leftovers(Folder("forks2")));
     }

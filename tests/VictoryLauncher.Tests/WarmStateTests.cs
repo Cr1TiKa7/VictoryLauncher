@@ -45,7 +45,7 @@ public class WarmStateTests
     [Fact]
     public void Hint_asks_for_a_first_warmup()
     {
-        Assert.Contains("Noch kein Warmup", WarmState.Hint(new ForkState(), "now"));
+        Assert.Contains("No warmup", WarmState.Hint(new ForkState(), "now"));
     }
 
     [Fact]
@@ -61,7 +61,7 @@ public class WarmStateTests
     public void Hint_after_a_relevant_change(string? stored)
     {
         var state = new ForkState { LastWarmCommit = "abc", LastWarmFingerprint = stored };
-        Assert.Contains("Seit dem letzten Warmup", WarmState.Hint(state, "now"));
+        Assert.Contains("since the last warmup", WarmState.Hint(state, "now"));
     }
 
     [Fact]

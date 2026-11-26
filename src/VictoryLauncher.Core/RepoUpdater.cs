@@ -16,7 +16,7 @@ public sealed class RepoUpdater(string git, string repoDir)
     {
         var (headCode, head) = await Git(log, cancel, "rev-parse", "HEAD");
         if (headCode != 0)
-            return new(UpdateState.CheckFailed, "", [], "Der Checkout-Ordner ist kein lesbares Git-Repository.\n" + Text(head));
+            return new(UpdateState.CheckFailed, "", [], "The checkout folder is not a readable git repository.\n" + Text(head));
         var current = head[0];
 
         // A hanging connection must not lock the launcher: the window cannot be closed while it checks.
@@ -30,14 +30,14 @@ public sealed class RepoUpdater(string git, string repoDir)
         }
         catch (OperationCanceledException) when (!cancel.IsCancellationRequested)
         {
-            return new(UpdateState.CheckFailed, current, [], "Prüfen nicht möglich: GitHub hat nicht rechtzeitig geantwortet.");
+            return new(UpdateState.CheckFailed, current, [], "Could not check: GitHub did not answer in time.");
         }
         if (fetchCode != 0)
-            return new(UpdateState.CheckFailed, current, [], "Prüfen nicht möglich (offline?).\n" + Text(fetch));
+            return new(UpdateState.CheckFailed, current, [], "Could not check (offline?).\n" + Text(fetch));
 
         var (listCode, newCommits) = await Git(log, cancel, "log", "--oneline", "--no-decorate", "HEAD..@{u}");
         if (listCode != 0)
-            return new(UpdateState.Blocked, current, [], "Der ausgecheckte Stand folgt keinem Branch auf GitHub.\n" + Text(newCommits));
+            return new(UpdateState.Blocked, current, [], "The checked out state does not follow a branch on GitHub.\n" + Text(newCommits));
         if (newCommits.Count == 0)
             return new(UpdateState.UpToDate, current, [], null);
 
@@ -45,13 +45,13 @@ public sealed class RepoUpdater(string git, string repoDir)
         var (statusCode, changes) = await Git(log, cancel, "status", "--porcelain", "--untracked-files=no");
         if (statusCode != 0 || changes.Count > 0)
             return new(UpdateState.Blocked, current, newCommits,
-                "Es gibt neue Commits, aber auch eigene Änderungen im Checkout. Nichts wurde überschrieben.\n" + Text(changes));
+                "There are new commits, but also your own changes in the checkout. Nothing was overwritten.\n" + Text(changes));
 
         // Not cancellable: a merge that is killed half way leaves a broken checkout.
         var (mergeCode, merge) = await Git(log, CancellationToken.None, "merge", "--ff-only", "@{u}");
         if (mergeCode != 0)
             return new(UpdateState.Blocked, current, newCommits,
-                "Update nicht möglich, der Checkout ist vom Stand auf GitHub abgewichen.\n" + Text(merge));
+                "Update not possible, the checkout has diverged from the state on GitHub.\n" + Text(merge));
 
         var (_, updated) = await Git(log, CancellationToken.None, "rev-parse", "HEAD");
         return new(UpdateState.Updated, updated[0], newCommits, null);

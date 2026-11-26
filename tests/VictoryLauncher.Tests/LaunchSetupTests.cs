@@ -338,7 +338,7 @@ public class LaunchSetupTests : IDisposable
         Touch("flat", "Cargo.toml");
         var setup = ValidSetup() with { Fork = ForkCatalog.Custom(Mine), RepoDir = Path.Combine(_root, "flat") };
 
-        Assert.Contains("VIctory-Aufbau", PathCheck.Checkout(setup));
+        Assert.Contains("No VIctory layout", PathCheck.Checkout(setup));
     }
 
     [Fact]
@@ -358,7 +358,7 @@ public class LaunchSetupTests : IDisposable
     {
         var setup = ValidSetup() with { CacheDir = Path.Combine(_root, folder) };
 
-        Assert.Contains("Cache", PathCheck.Folders(setup));
+        Assert.Contains("The cache must not", PathCheck.Folders(setup));
     }
 
     [Theory]
@@ -368,7 +368,7 @@ public class LaunchSetupTests : IDisposable
     {
         var setup = ValidSetup() with { DataDir = Path.Combine(_root, folder) };
 
-        Assert.Contains("Spielstände", PathCheck.Folders(setup));
+        Assert.Contains("save games", PathCheck.Folders(setup));
     }
 
     [Fact]
@@ -376,7 +376,7 @@ public class LaunchSetupTests : IDisposable
     {
         var setup = ValidSetup() with { RepoDir = Path.Combine(_root, "game", "fork") };
 
-        Assert.Contains("Spielordner", PathCheck.Folders(setup));
+        Assert.Contains("game folder", PathCheck.Folders(setup));
     }
 
     [Fact]
@@ -385,7 +385,7 @@ public class LaunchSetupTests : IDisposable
         var setup = ValidSetup() with { GameDir = Path.Combine(_root, "no-game-here") };
 
         Assert.Null(PathCheck.RepoFolder(setup));
-        Assert.Contains("Spielordner", PathCheck.RepoFolder(setup with { RepoDir = Path.Combine(setup.GameDir, "x") }));
+        Assert.Contains("game folder", PathCheck.RepoFolder(setup with { RepoDir = Path.Combine(setup.GameDir, "x") }));
         Assert.NotNull(PathCheck.RepoFolder(setup with { RepoDir = "relative" }));
         // an empty game box must not make every folder look as if it were inside
         Assert.Null(PathCheck.RepoFolder(setup with { GameDir = "" }));

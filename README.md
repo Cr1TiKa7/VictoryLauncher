@@ -1,83 +1,86 @@
 # VictoryLauncher
 
-Ein Windows-Launcher für die Forks der VIctory-Familie: Fork wählen, auschecken, Release bauen, Shader vorwärmen
-(wenn der Fork das kann) und das Spiel starten.
+A Windows launcher for the forks of the VIctory family: pick a fork, check it out, build the release, warm up the
+shaders (if the fork can do that) and start the game.
 
-Spieldateien sind nicht enthalten, du brauchst deine eigenen, rechtmäßig erworbenen. Das Projekt gehört weder zu
-Rockstar Games, Take-Two oder Microsoft noch zu den Autoren der Forks.
+Game files are not included, you need your own, lawfully obtained ones. This project is not affiliated with Rockstar
+Games, Take-Two or Microsoft, nor with the authors of the forks.
 
-![Das Fenster des VictoryLaunchers: Fork-Auswahl, Ordner, Warmup und der Knopf „Spiel starten“](docs/screenshot.png)
+![The VictoryLauncher window: fork selection, folders, warmup and the "Start game" button](docs/screenshot.png)
 
-## Voraussetzungen
+## Requirements
 
 - Windows x64
 - git
-- Rust (rustup) samt den C++ Build Tools von Visual Studio
-- nur für kelvaroq: Python 3.11 oder neuer und das Windows SDK
-- zum Bauen aus dem Quellcode: das .NET 10 SDK, für die Tests außerdem PowerShell 7 (die fertige ZIP aus den
-  Releases braucht beides nicht)
+- Rust (rustup) with the C++ Build Tools of Visual Studio
+- for kelvaroq only: Python 3.11 or newer and the Windows SDK
+- to build from source: the .NET 10 SDK, and PowerShell 7 for the tests (the ready made ZIP from the releases needs
+  neither)
 
-## Eingebaute Forks
+## Built in forks
 
-| Fork | Warmup | Einstellungen |
-|------|--------|---------------|
-| [AnyXboxX](https://github.com/LooperSalty/AnyXboxX) | ja, mit Prozentanzeige | aus `crates\anyxboxx\src\run\settings.rs`, wandern mit den Updates mit |
-| [klbf-lab](https://github.com/PastiiJay/klbf-lab) | ja (`translate`) | aus dem README des Forks, ohne Series-S-Profil |
-| [Vice-Tay](https://github.com/TaynanGT/Vice-Tay) | ja (`shaders`, dann `warm --used`) | aus seinem `play.ps1` (NVIDIA) |
-| [VIctory-7900XTX](https://github.com/avatarmanz/VIctory-7900XTX) | ja (`shaders`, dann `warm --used`) | aus seinem `play.ps1`, auf AMD abgestimmt |
-| [kelvaroq](https://github.com/fablinoo/kelvaroq) | wird nach dem Build erkannt | Stufe für 10 GB |
-| [VItoriaBr](https://github.com/uiliannn/VItoriaBr) | ja (`warm`) | sein Preset für 8 GB |
-| [victory-fork](https://github.com/fxceless/victory-fork) | nein | `VICTORY_TEXTURE_BACK=1` |
+| Fork | Warmup | Settings |
+|------|--------|----------|
+| [AnyXboxX](https://github.com/LooperSalty/AnyXboxX) | yes, with a percentage | from `crates\anyxboxx\src\run\settings.rs`, they follow the updates |
+| [klbf-lab](https://github.com/PastiiJay/klbf-lab) | yes (`translate`) | from the README of the fork, without the Series S profile |
+| [Vice-Tay](https://github.com/TaynanGT/Vice-Tay) | yes (`shaders`, then `warm --used`) | from its `play.ps1` (NVIDIA) |
+| [VIctory-7900XTX](https://github.com/avatarmanz/VIctory-7900XTX) | yes (`shaders`, then `warm --used`) | from its `play.ps1`, tuned for AMD |
+| [kelvaroq](https://github.com/fablinoo/kelvaroq) | detected after the build | the tier for 10 GB |
+| [VItoriaBr](https://github.com/uiliannn/VItoriaBr) | yes (`warm`) | its preset for 8 GB |
+| [victory-fork](https://github.com/fxceless/victory-fork) | no | `VICTORY_TEXTURE_BACK=1` |
 
-Außer bei AnyXboxX liest der Launcher die Art des Warmups aus der Hilfe des gebauten Programms. Dazu kommt "Eigene Git-URL …" (nur `https://`, Aufbau mit `apps\victory` im Stamm oder unter `third_party\victory`,
-ohne besondere Einstellungen).
+Except for AnyXboxX, the launcher reads the kind of warmup from the help of the built program. There is also
+"Own Git URL …" (`https://` only, a layout with `apps\victory` in the root or below `third_party\victory`, no special
+settings).
 
-Bis auf AnyXboxX sind die Einstellungen eine Momentaufnahme vom 26.11.2026, ausgelegt auf eine NVIDIA-Karte mit
-10 GB, soweit der Fork das hergibt. Ob ein Fork auf deinem PC ein Bild liefert, kann der Launcher nicht sagen.
+Apart from AnyXboxX, the settings are a snapshot from 2026-11-26, meant for an NVIDIA card with 10 GB, as far as the
+fork allows it. The launcher cannot tell whether a fork shows a picture on your PC.
 
-## Was der Launcher tut
+## What the launcher does
 
-- **Fremder Code:** Vor dem ersten Auschecken eines Forks fragt er einmal je Adresse nach (AnyXboxX ist vorab
-  bestätigt). Danach werden neue Commits ohne weitere Rückfrage geholt, gebaut und ausgeführt. Schon das Bauen führt
-  fremden Code mit deinen Rechten aus.
-- **Aktuell bleiben:** beim Öffnen, vor jedem Warmup und vor jedem Spielstart neue Commits holen (nur Fast Forward)
-  und das Release bauen. Eigene Änderungen im Checkout werden nicht überschrieben.
-- **Spielordner:** Der Launcher schreibt nichts hinein.
-- **Programmprüfung:** Vor dem Spielstart zeigt er Programme, die Videospeicher oder CPU belegen. Nichts ist vorab
-  angehakt. Angehakte werden normal geschlossen; was weiterläuft, wird nur nach einer zweiten Rückfrage hart beendet.
-- **Treiber-Cache:** Den Shader-Cache des Grafiktreibers verwaltet er nicht.
+- **Third party code:** Before it checks out a fork for the first time, it asks once per address (AnyXboxX is
+  confirmed in advance). After that, new commits are fetched, built and run without asking again. Building alone
+  already runs third party code with your permissions.
+- **Staying up to date:** When it opens, before every warmup and before every game start it fetches new commits
+  (fast forward only) and builds the release. Your own changes in the checkout are not overwritten.
+- **Game folder:** The launcher writes nothing into it.
+- **Program check:** Before the game starts, it lists programs that use video memory or CPU. Nothing is ticked in
+  advance. Ticked programs are closed normally; whatever keeps running is only force closed after a second question.
+- **Driver cache:** It does not manage the shader cache of the graphics driver.
 
-## Updates des Launchers
+## Updates of the launcher
 
-Nur die EXE aus einem Release aktualisiert sich. Ein selbst gebauter Launcher heißt im Fenstertitel `(Eigenbau)`
-und sucht gar nicht erst.
+Only the EXE from a release updates itself. A launcher you built yourself shows `(local build)` in the window title and
+does not even look for updates.
 
-- Beim Öffnen fragt der Launcher im Hintergrund GitHub nach dem neuesten Release dieses Repositorys (ohne
-  Anmeldung). Ist es höher als die eigene Version, erscheint eine Leiste mit dem Knopf **Aktualisieren**. Offline
-  oder bei Fehlern steht höchstens eine Zeile im Protokoll.
-- Erst ein Klick lädt die ZIP, prüft Größe und SHA-256, tauscht die EXE aus und startet den Launcher neu.
-  `settings.json` und `logs\` bleiben. Während geprüft, gebaut, vorgewärmt oder gespielt wird, ist der Knopf gesperrt.
-- Der Ordner der EXE muss beschreibbar sein.
-- Die EXE ist nicht signiert. Die Prüfsumme kommt aus demselben GitHub-Konto wie die ZIP: Sie erkennt beschädigte
-  Downloads, schützt aber nicht, wenn jemand das Konto übernimmt.
+- When it opens, the launcher asks GitHub in the background for the latest release of this repository (without signing
+  in). If it is newer than the launcher itself, a bar with an **Update** button appears. When you are offline or
+  something fails, there is at most one line in the log.
+- Only a click downloads the ZIP, checks its size and SHA-256, replaces the EXE and restarts the launcher.
+  `settings.json` and `logs\` are kept. The button is disabled while the launcher checks, builds or warms up, and while
+  the game runs.
+- The folder of the EXE has to be writable.
+- The EXE is not signed. The checksum comes from the same GitHub account as the ZIP: it detects damaged downloads, but
+  it does not protect you if someone takes over the account.
 
-Wer bisher selbst gebaut hat, entpackt einmal die ZIP eines Release und kopiert seine `settings.json` daneben.
+If you have been building the launcher yourself, unpack the ZIP of a release once and copy your `settings.json` next
+to it.
 
-## Ordner
+## Folders
 
-Voreingestellt:
+Defaults:
 
-| Was | Wo |
-|-----|----|
-| Spielordner | `G:\DevElop` |
-| Checkout, Cache, Spielstände eines Forks | `G:\victory-data\forks\<id>`, `cache-<id>`, `data-<id>` |
-| AnyXboxX | Checkout `G:\AnyXboxX`, Cache `G:\victory-data\cache-anyxboxx`, Spielstände am Standardort der Runtime |
+| What | Where |
+|------|-------|
+| Game folder | `G:\DevElop` |
+| Checkout, cache and save games of a fork | `G:\victory-data\forks\<id>`, `cache-<id>`, `data-<id>` |
+| AnyXboxX | checkout `G:\AnyXboxX`, cache `G:\victory-data\cache-anyxboxx`, save games in the default location of the runtime |
 
-Spiel-, Cache- und Checkout-Ordner lassen sich in der Oberfläche ändern, die Wurzel `G:\victory-data` als
-`DataRoot` in `settings.json`. `settings.json` und `logs\` liegen neben der EXE. Lässt sich eine vorhandene
-`settings.json` nicht lesen, sagt der Launcher das, nimmt die Standardwerte und überschreibt die Datei nicht.
+You can change the game, cache and checkout folders in the window, and the root `G:\victory-data` as `DataRoot` in
+`settings.json`. `settings.json` and `logs\` are next to the EXE. If an existing `settings.json` cannot be read, the
+launcher says so, uses the default values and does not overwrite the file.
 
-## Bauen
+## Building
 
 ```powershell
 dotnet test tests/VictoryLauncher.Tests
@@ -87,18 +90,17 @@ dotnet test tests/VictoryLauncher.Tests
 dotnet publish src/VictoryLauncher -c Release -o app
 ```
 
-Einige Tests öffnen eigene Testfenster außerhalb des Bildschirms oder brauchen die Leistungszähler einer
-Grafikkarte. Sie tragen die Kategorie `Desktop` und laufen auf dem Build-Server nicht
-(`--filter "Category!=Desktop"`).
+Some tests open test windows of their own outside the screen or need the performance counters of a graphics card. They
+have the category `Desktop` and do not run on the build server (`--filter "Category!=Desktop"`).
 
 ## Release
 
-Eine neue Version baust du auf GitHub: **Actions → Release → Run workflow**, Branch `main`, als `version` zum
-Beispiel `1.0.0`. Die Action prüft die Nummer, testet, baut die eigenständige ZIP und legt den Tag `v1.0.0` samt
-Release an. Die Nummer muss aus drei Zahlen bestehen und höher sein als alle bisherigen. Ältere Launcher bieten sie
-danach als Update an.
+You build a new version on GitHub: **Actions → Release → Run workflow**, branch `main`, with a `version` such as
+`1.0.0`. The action checks the number, runs the tests, builds the self-contained ZIP and creates the tag `v1.0.0` with
+its release. The number has to consist of three numbers and be higher than all earlier ones. Older launchers then offer
+it as an update.
 
-Ein selbst gepushter Tag geht weiterhin:
+Pushing a tag yourself still works:
 
 ```powershell
 git tag v1.0.0
@@ -108,6 +110,6 @@ git tag v1.0.0
 git push origin v1.0.0
 ```
 
-Jeder Push auf `main` und jeder Pull Request testet und baut ebenfalls eine ZIP (Version `0.0.0`) und hängt sie als
-Artefakt an den Lauf, ohne ein Release anzulegen. Die Regeln für die Versionsnummer stehen in
-[Get-ReleaseVersion.ps1](packaging/Get-ReleaseVersion.ps1). Ihre Tests brauchen PowerShell 7.
+Every push to `main` and every pull request also runs the tests and builds a ZIP (version `0.0.0`) that is attached to
+the run as an artifact, without creating a release. The rules for the version number are in
+[Get-ReleaseVersion.ps1](packaging/Get-ReleaseVersion.ps1). Its tests need PowerShell 7.

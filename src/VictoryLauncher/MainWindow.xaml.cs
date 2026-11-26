@@ -1,5 +1,6 @@
 ﻿using System.ComponentModel;
 using System.Diagnostics;
+using System.Globalization;
 using System.IO;
 using System.Text.RegularExpressions;
 using System.Windows;
@@ -98,7 +99,7 @@ public partial class MainWindow : Window
         var showing = _showing;
         _showing = true;
         var choices = ForkCatalog.All(_settings.CustomUrls).Select(fork => new ForkChoice(fork.Name, fork)).ToList();
-        choices.Add(new("Eigene Git-URL …", null));
+        choices.Add(new("Own Git URL …", null));
         ForkBox.ItemsSource = choices;
         ForkBox.SelectedItem = choices.FirstOrDefault(c => c.Fork?.Id == _fork.Id) ?? choices[0];
         _showing = showing;
@@ -132,12 +133,12 @@ public partial class MainWindow : Window
             typing ? Visibility.Visible : Visibility.Collapsed;
         RemoveForkButton.Visibility = !typing && _fork.IsCustom ? Visibility.Visible : Visibility.Hidden;
         ForkNote.Text = typing
-            ? "https-Adresse eines Repositorys mit VIctory-Aufbau eingeben, z. B. https://github.com/name/projekt"
+            ? "Enter the https address of a repository with a VIctory layout, for example https://github.com/name/project"
             : string.Join("\n", new[]
             {
                 _fork.Url,
                 _fork.Note,
-                setup.DataDir is { } data ? $"Spielstände: {data}" : null,
+                setup.DataDir is { } data ? $"Save games: {data}" : null,
             }.Where(line => !string.IsNullOrEmpty(line)));
 
         GameBox.Text = _settings.GameDir;
@@ -146,16 +147,16 @@ public partial class MainWindow : Window
 
         WarmBar.Value = 0;
         VersionText.Text = typing ? ""
-            : ForkCheckout.Exists(setup.RepoDir) ? "noch nicht geprüft"
-            : "noch nicht ausgecheckt";
-        StatusText.Text = typing ? "Adresse eingeben und hinzufügen." : "Bereit.";
+            : ForkCheckout.Exists(setup.RepoDir) ? "not checked yet"
+            : "not checked out yet";
+        StatusText.Text = typing ? "Enter the address and add it." : "Ready.";
         _showing = showing;
         ShowCheckButton();
         ShowHint();
     }
 
     private void ShowCheckButton() =>
-        CheckButton.Content = !TypingUrl && !ForkCheckout.Exists(Setup.RepoDir) ? "AUSCHECKEN" : "PRÜFEN";
+        CheckButton.Content = !TypingUrl && !ForkCheckout.Exists(Setup.RepoDir) ? "CHECK OUT" : "CHECK";
 
     private void Url_KeyDown(object sender, KeyEventArgs e)
     {
@@ -192,7 +193,7 @@ public partial class MainWindow : Window
     private void RemoveFork_Click(object sender, RoutedEventArgs e)
     {
         if (_activity != Activity.Idle || !_fork.IsCustom || MessageBox.Show(this,
-                $"{_fork.Name} aus der Liste entfernen?\n\nDateien bleiben liegen:\n{Setup.RepoDir}\n{Setup.CacheDir}",
+                $"Remove {_fork.Name} from the list?\n\nFiles stay where they are:\n{Setup.RepoDir}\n{Setup.CacheDir}",
                 Title, MessageBoxButton.YesNo, MessageBoxImage.Question, MessageBoxResult.No) != MessageBoxResult.Yes)
             return;
         // The agreement goes with the entry: adding the address again asks again.
@@ -213,10 +214,10 @@ public partial class MainWindow : Window
             return true;
         var answer = MessageBox.Show(this,
             $"{_fork.Name}\n{_fork.Url}\n\n" +
-            "Der Launcher checkt diesen Fork aus, baut ihn und führt ihn aus. Das ist fremder Code, den niemand " +
-            "geprüft hat. Er läuft mit deinen Rechten, schon beim Bauen. Neue Commits werden später ohne weitere " +
-            $"Rückfrage gebaut.\n\n{_fork.Note}\n\nCheckout nach: {Setup.RepoDir}\n\nDiesem Fork vertrauen?",
-            "Fremden Code ausführen?", MessageBoxButton.YesNo, MessageBoxImage.Warning, MessageBoxResult.No);
+            "The launcher checks out this fork, builds it and runs it. This is third party code that nobody has " +
+            "reviewed. It runs with your permissions, already while it is being built. Later commits are built " +
+            $"without asking again.\n\n{_fork.Note}\n\nCheckout to: {Setup.RepoDir}\n\nDo you trust this fork?",
+            "Run third party code?", MessageBoxButton.YesNo, MessageBoxImage.Warning, MessageBoxResult.No);
         if (answer != MessageBoxResult.Yes)
             return false;
         _settings = _settings.With(_fork.Id, State with { TrustedUrl = _fork.Url });
@@ -236,15 +237,15 @@ public partial class MainWindow : Window
     private void Cancel_Click(object sender, RoutedEventArgs e)
     {
         CancelButton.IsEnabled = false;
-        StatusText.Text = "Breche ab …";
+        StatusText.Text = "Cancelling …";
         _cancel?.Cancel();
     }
 
-    private void BrowseGame_Click(object sender, RoutedEventArgs e) => Browse(GameBox, "Spielordner wählen");
+    private void BrowseGame_Click(object sender, RoutedEventArgs e) => Browse(GameBox, "Select the game folder");
 
-    private void BrowseCache_Click(object sender, RoutedEventArgs e) => Browse(CacheBox, "Cache-Ordner wählen");
+    private void BrowseCache_Click(object sender, RoutedEventArgs e) => Browse(CacheBox, "Select the cache folder");
 
-    private void BrowseRepo_Click(object sender, RoutedEventArgs e) => Browse(RepoBox, "Checkout-Ordner wählen");
+    private void BrowseRepo_Click(object sender, RoutedEventArgs e) => Browse(RepoBox, "Select the checkout folder");
 
     private void Browse(TextBox box, string title)
     {
@@ -279,23 +280,23 @@ public partial class MainWindow : Window
     {
         var setup = Setup;
         if (VictoryIsRunning())
-            return Stop("victory.exe läuft bereits. Bitte zuerst beenden.");
+            return Stop("victory.exe is already running. Please close it first.");
         if (PathCheck.RepoFolder(setup) is { } folderProblem)
             return Stop(folderProblem);
         if (!Trust())
         {
-            StatusText.Text = "Abgebrochen. Nichts wurde ausgecheckt oder gebaut.";
+            StatusText.Text = "Cancelled. Nothing was checked out or built.";
             return false;
         }
         if (Tools.Find("git") is not { } git)
-            return Stop("git wurde nicht gefunden.");
+            return Stop("git was not found.");
         var tools = new Dictionary<string, string>();
         foreach (var name in _fork.Build.Select(step => step.Tool).Distinct())
         {
             if (Tools.Find(name) is not { } path)
                 return Stop(name == "cargo"
-                    ? "cargo wurde nicht gefunden (Rust ist nicht installiert)."
-                    : $"{name} wurde nicht gefunden, dieser Fork braucht es zum Bauen.");
+                    ? "cargo was not found (Rust is not installed)."
+                    : $"{name} was not found, this fork needs it for the build.");
             tools[name] = path;
         }
 
@@ -308,15 +309,15 @@ public partial class MainWindow : Window
         WarmBar.IsIndeterminate = true;
         try
         {
-            VersionText.Text = "wird geprüft …";
-            StatusText.Text = ForkCheckout.Exists(setup.RepoDir) ? "Prüfe den Checkout …" : "Checke den Fork aus …";
+            VersionText.Text = "checking …";
+            StatusText.Text = ForkCheckout.Exists(setup.RepoDir) ? "Checking the checkout …" : "Checking out the fork …";
             AllowCancel(true);
             var checkoutProblem = await ForkCheckout.EnsureAsync(git, _fork.Url, setup.RepoDir, _log.Add, cancel.Token);
             AllowCancel(false);
             if (checkoutProblem is not null)
                 return Stop(checkoutProblem);
 
-            StatusText.Text = "Prüfe auf neue Commits …";
+            StatusText.Text = "Checking for new commits …";
             var updater = new RepoUpdater(git, setup.RepoDir);
             var update = await updater.CheckAndPullAsync(_log.Add, CancellationToken.None);
             _head = update.Head;
@@ -329,16 +330,16 @@ public partial class MainWindow : Window
             if (File.Exists(setup.ExePath()))
                 _checked = (_fork.Id, setup.RepoDir, sourceId, warm);
 
-            var commit = _head.Length >= 7 ? _head[..7] : "unbekannt";
+            var commit = _head.Length >= 7 ? _head[..7] : "unknown";
             var state = update.State switch
             {
-                UpdateState.UpToDate => "neuester Stand",
-                UpdateState.Updated => $"aktualisiert ({update.NewCommits.Count} neue Commits)",
-                UpdateState.CheckFailed => "NICHT geprüft",
-                _ => "NICHT aktuell",
+                UpdateState.UpToDate => "up to date",
+                UpdateState.Updated => $"updated (new commits: {update.NewCommits.Count})",
+                UpdateState.CheckFailed => "NOT checked",
+                _ => "NOT up to date",
             };
-            VersionText.Text = $"{commit} · {state} · {(buildOk ? "Release gebaut" : "Build FEHLGESCHLAGEN")}";
-            StatusText.Text = "Bereit.";
+            VersionText.Text = $"{commit} · {state} · {(buildOk ? "release built" : "build FAILED")}";
+            StatusText.Text = "Ready.";
 
             var updateOk = update.State is UpdateState.UpToDate or UpdateState.Updated;
             if (updateOk && buildOk)
@@ -347,7 +348,7 @@ public partial class MainWindow : Window
             var problem = string.Join("\n\n", new[]
             {
                 updateOk ? null : update.Message,
-                buildOk ? null : "Der Build ist fehlgeschlagen, Details in logs\\update.log.",
+                buildOk ? null : "The build failed, details in logs\\update.log.",
             }.Where(text => text is not null));
             StatusText.Text = problem;
             if (!askOnFailure)
@@ -357,13 +358,13 @@ public partial class MainWindow : Window
                 Warn(problem);
                 return false;
             }
-            return MessageBox.Show(this, problem + "\n\nMit dem vorhandenen Programm weitermachen?", Title,
+            return MessageBox.Show(this, problem + "\n\nCarry on with the program that is already there?", Title,
                 MessageBoxButton.YesNo, MessageBoxImage.Warning, MessageBoxResult.No) == MessageBoxResult.Yes;
         }
         catch (OperationCanceledException) when (cancel.IsCancellationRequested)
         {
-            VersionText.Text = "abgebrochen";
-            StatusText.Text = "Abgebrochen.";
+            VersionText.Text = "cancelled";
+            StatusText.Text = "Cancelled.";
             return false;
         }
         finally
@@ -378,7 +379,7 @@ public partial class MainWindow : Window
         bool Stop(string message)
         {
             VersionText.Text = message;
-            StatusText.Text = "Nicht bereit.";
+            StatusText.Text = "Not ready.";
             if (askOnFailure)
                 Warn(message);
             return false;
@@ -394,11 +395,11 @@ public partial class MainWindow : Window
             var step = _fork.Build[i];
             if (step.OnlyAfterChanges && unchanged)
             {
-                _log.Add($"Übersprungen, seit dem letzten Build unverändert: {step.Tool} {string.Join(' ', step.Arguments)}");
+                _log.Add($"Skipped, unchanged since the last build: {step.Tool} {string.Join(' ', step.Arguments)}");
                 continue;
             }
-            var count = _fork.Build.Count > 1 ? $" Schritt {i + 1} von {_fork.Build.Count}." : "";
-            StatusText.Text = "Baue das Release (dauert nur nach Änderungen länger) …" + count;
+            var count = _fork.Build.Count > 1 ? $" Step {i + 1} of {_fork.Build.Count}." : "";
+            StatusText.Text = "Building the release (only takes long after changes) …" + count;
             AllowCancel(step.Cancellable);
             var code = await ProcessRunner.RunAsync(BuildCommand(setup, step, tools), _log.Add,
                 step.Cancellable ? cancel : CancellationToken.None);
@@ -408,7 +409,7 @@ public partial class MainWindow : Window
         }
         if (!File.Exists(setup.ExePath()))
         {
-            _log.Add($"Der Build lief durch, aber es gibt kein {setup.ExePath()}.");
+            _log.Add($"The build finished, but there is no {setup.ExePath()}.");
             return false;
         }
         _settings = _settings.With(_fork.Id, State with { LastBuiltCommit = _head });
@@ -444,12 +445,12 @@ public partial class MainWindow : Window
             var warm = commands.Contains("warm") ? await Help(setup, "warm", "--help") : "";
             var translate = commands.Contains("translate") ? await Help(setup, "translate", "--help") : "";
             var kind = WarmPlan.Detect(help, warm, translate);
-            _log.Add($"Warmup-Art laut Hilfe des Programms: {kind}");
+            _log.Add($"Warmup kind according to the help of the program: {kind}");
             return kind;
         }
         catch (Exception e) when (e is OperationCanceledException or Win32Exception or IOException)
         {
-            _log.Add("Die Hilfe des Programms ließ sich nicht lesen: " + e.Message);
+            _log.Add("The help of the program could not be read: " + e.Message);
             return WarmKind.None;
         }
     }
@@ -503,7 +504,7 @@ public partial class MainWindow : Window
         {
             for (var i = 0; i < starts.Count; i++)
             {
-                _warmStep = starts.Count > 1 ? $"Schritt {i + 1} von {starts.Count} ({steps[i][0]})" : steps[i][0];
+                _warmStep = starts.Count > 1 ? $"step {i + 1} of {starts.Count} ({steps[i][0]})" : steps[i][0];
                 _log.Add($"> {Path.GetFileName(setup.ExePath())} {string.Join(' ', steps[i])}");
                 var code = await ProcessRunner.RunAsync(starts[i], line =>
                 {
@@ -519,7 +520,7 @@ public partial class MainWindow : Window
                     SetActivity(Activity.Updating);
                     WarmBar.IsIndeterminate = false;
                     WarmBar.Value = progress?.Percent ?? 0;
-                    StatusText.Text = $"Warmup fehlgeschlagen bei {_warmStep} (Exit-Code {code}). Details in logs\\warm.log.";
+                    StatusText.Text = $"Warmup failed at {_warmStep} (exit code {code}). Details in logs\\warm.log.";
                     return;
                 }
             }
@@ -529,7 +530,7 @@ public partial class MainWindow : Window
             SetActivity(Activity.Updating);
             WarmBar.IsIndeterminate = false;
             WarmBar.Value = 100;
-            StatusText.Text = $"Warmup fertig nach {Clock()}: " + Shorten(Regex.Replace(result, @"\s+", " "), 220);
+            StatusText.Text = $"Warmup finished after {Clock()}: " + Shorten(Regex.Replace(result, @"\s+", " "), 220);
             _settings = _settings.With(_fork.Id, State with
             {
                 LastWarmCommit = commit,
@@ -545,8 +546,8 @@ public partial class MainWindow : Window
             SetActivity(Activity.Updating);
             WarmBar.IsIndeterminate = false;
             StatusText.Text = kind == WarmKind.GameFiles
-                ? "Warmup abgebrochen. Die Pipeline-Bibliothek wurde nicht gespeichert, bitte das Warmup später wiederholen."
-                : "Warmup abgebrochen, bitte später wiederholen.";
+                ? "Warmup cancelled. The pipeline library was not saved, please repeat the warmup later."
+                : "Warmup cancelled, please repeat it later.";
         }
         finally
         {
@@ -561,7 +562,7 @@ public partial class MainWindow : Window
             return;
         if (!await CheckPrograms())
         {
-            StatusText.Text = "Start abgebrochen.";
+            StatusText.Text = "Start cancelled.";
             return;
         }
 
@@ -575,8 +576,8 @@ public partial class MainWindow : Window
         var code = await ProcessRunner.RunAsync(start, _log.Add, CancellationToken.None);
         SetActivity(Activity.Updating);
         StatusText.Text = code == 0
-            ? $"Spiel beendet nach {Clock()}."
-            : $"Das Spiel endete mit Exit-Code {code} nach {Clock()}. Details in logs\\game.log.";
+            ? $"Game closed after {Clock()}."
+            : $"The game ended with exit code {code} after {Clock()}. Details in logs\\game.log.";
     }
 
     // ---------- programs to close before the game ----------
@@ -587,14 +588,14 @@ public partial class MainWindow : Window
     {
         try
         {
-            StatusText.Text = "Prüfe laufende Programme …";
+            StatusText.Text = "Checking running programs …";
             WarmBar.IsIndeterminate = true;
             var scan = await ProcessScanner.ScanAsync(TimeSpan.FromSeconds(3), CancellationToken.None);
             if (scan.Warning is { } warning)
                 _log.Add(warning);
             var found = ProgramCheck.Select(scan.Processes, scan.OwnSession, scan.FreeRamBytes,
                 Environment.GetFolderPath(Environment.SpecialFolder.Windows));
-            _log.Add($"Programmprüfung: {found.Count} Programme gemeldet.");
+            _log.Add($"Program check: programs reported: {found.Count}");
             if (found.Count == 0)
                 return true;
 
@@ -603,18 +604,18 @@ public partial class MainWindow : Window
             if (dialog.Choice != ProgramChoice.CloseSelected)
                 return dialog.Choice == ProgramChoice.StartAnyway;
 
-            StatusText.Text = "Schließe die ausgewählten Programme …";
-            _log.Add("Schließen: " + Names(dialog.Selected));
+            StatusText.Text = "Closing the selected programs …";
+            _log.Add("Closing: " + Names(dialog.Selected));
             return await ProgramCloser.CloseForStartAsync(dialog.Selected, TimeSpan.FromSeconds(8), AskForce,
                 stuck =>
                 {
-                    _log.Add("Ließ sich nicht beenden: " + Names(stuck));
-                    Warn("Diese Programme ließen sich nicht beenden, das Spiel startet trotzdem:\n\n" + Bullets(stuck));
+                    _log.Add("Could not be closed: " + Names(stuck));
+                    Warn("These programs could not be closed, the game starts anyway:\n\n" + Bullets(stuck));
                 }, CancellationToken.None);
         }
         catch (Exception e)
         {
-            _log.Add("Programmprüfung fehlgeschlagen: " + e);
+            _log.Add("Program check failed: " + e);
             return true;
         }
         finally
@@ -626,19 +627,19 @@ public partial class MainWindow : Window
     private ForceAnswer AskForce(IReadOnlyList<ProgramCandidate> remaining)
     {
         var answer = MessageBox.Show(this,
-            "Diese Programme laufen noch:\n\n" + Bullets(remaining) +
-            "\n\nFragt eines gerade, ob gespeichert werden soll, antworte bitte zuerst dort." +
-            "\n\nJa: hart beenden und starten. Nicht Gespeichertes geht dabei verloren." +
-            "\nNein: weiterlaufen lassen und starten." +
-            "\nAbbrechen: nicht starten.",
-            "Hart beenden?", MessageBoxButton.YesNoCancel, MessageBoxImage.Warning, MessageBoxResult.No);
+            "These programs are still running:\n\n" + Bullets(remaining) +
+            "\n\nIf one of them is asking whether to save, please answer it there first." +
+            "\n\nYes: force close and start. Anything not saved is lost." +
+            "\nNo: leave them running and start." +
+            "\nCancel: do not start.",
+            "Force close?", MessageBoxButton.YesNoCancel, MessageBoxImage.Warning, MessageBoxResult.No);
         var choice = answer switch
         {
             MessageBoxResult.Yes => ForceAnswer.Force,
             MessageBoxResult.No => ForceAnswer.Leave,
             _ => ForceAnswer.Cancel,
         };
-        _log.Add($"Läuft noch: {Names(remaining)}. Antwort: {choice}");
+        _log.Add($"Still running: {Names(remaining)}. Answer: {choice}");
         return choice;
     }
 
@@ -689,7 +690,7 @@ public partial class MainWindow : Window
         catch (Exception e)
         {
             _log.Add(e.ToString());
-            StatusText.Text = "Fehler: " + e.Message;
+            StatusText.Text = "Error: " + e.Message;
             Warn(e.Message);
         }
         finally
@@ -712,7 +713,7 @@ public partial class MainWindow : Window
             control.IsEnabled = forkChosen;
         WarmButton.IsEnabled = forkChosen && CheckedWarm() != WarmKind.None;
         CancelButton.IsEnabled = activity == Activity.Warming;
-        PlayButton.Content = activity == Activity.Playing ? "SPIEL LÄUFT …" : "SPIEL STARTEN";
+        PlayButton.Content = activity == Activity.Playing ? "GAME RUNNING …" : "START GAME";
     }
 
     /// <summary>For the parts of a check that may be stopped: cloning and the cargo build.</summary>
@@ -736,8 +737,8 @@ public partial class MainWindow : Window
             if (_warm is { } warm)
             {
                 WarmBar.Value = warm.Percent;
-                var total = State.LastWarmTotal is null ? $"ca. {warm.Total:N0} (geschätzt)" : $"{warm.Total:N0}";
-                StatusText.Text = $"{warm.Count:N0} von {total} Shadern · {warm.Percent:0} % · {Clock()}";
+                var total = State.LastWarmTotal is null ? $"about {Number(warm.Total)} (estimated)" : Number(warm.Total);
+                StatusText.Text = $"{Number(warm.Count)} of {total} shaders · {warm.Percent:0}% · {Clock()}";
             }
             else
             {
@@ -746,16 +747,19 @@ public partial class MainWindow : Window
         }
         else if (_activity == Activity.Playing)
         {
-            StatusText.Text = $"Das Spiel läuft seit {Clock()}. Zum Beenden das Spielfenster schließen.";
+            StatusText.Text = $"The game has been running for {Clock()}. To quit, close the game window.";
         }
         else if (Volatile.Read(ref _downloadPercent) is var percent and >= 0 && _cancel is { IsCancellationRequested: false })
         {
             WarmBar.Value = percent;
-            StatusText.Text = $"Lade Version {_update?.Version} … {percent} %";
+            StatusText.Text = $"Downloading version {_update?.Version} … {percent}%";
         }
     }
 
     private static string Shorten(string text, int length) => text.Length <= length ? text : text[..length] + " …";
+
+    /// <summary>With English separators like the rest of the window, whatever Windows is set to.</summary>
+    private static string Number(long value) => value.ToString("N0", CultureInfo.InvariantCulture);
 
     private string Clock() => _clock.Elapsed.ToString(_clock.Elapsed.TotalHours >= 1 ? @"h\:mm\:ss" : @"m\:ss");
 
@@ -793,10 +797,10 @@ public partial class MainWindow : Window
 
     private void WarnAboutSettings()
     {
-        _log.Add($"{SettingsFile} ließ sich nicht lesen: {_settings.LoadProblem}");
-        Warn("settings.json ließ sich nicht lesen. Es gelten die Standardwerte. Damit nichts verloren geht, wird die " +
-             "Datei nicht überschrieben: Änderungen gelten nur bis zum Schließen.\n\n" +
-             "Repariere oder lösche die Datei und starte den Launcher neu, dann speichert er wieder.\n\n" +
+        _log.Add($"{SettingsFile} could not be read: {_settings.LoadProblem}");
+        Warn("settings.json could not be read. The default values apply. So that nothing gets lost, the file is not " +
+             "overwritten: changes only last until you close the launcher.\n\n" +
+             "Repair or delete the file and restart the launcher, then it saves again.\n\n" +
              $"{SettingsFile}\n{_settings.LoadProblem}");
     }
 
@@ -808,7 +812,7 @@ public partial class MainWindow : Window
         }
         catch (Exception e) when (e is IOException or UnauthorizedAccessException)
         {
-            _log.Add("Einstellungen nicht gespeichert: " + e.Message);
+            _log.Add("Settings not saved: " + e.Message);
         }
     }
 
@@ -824,18 +828,18 @@ public partial class MainWindow : Window
         {
             case Activity.Playing:
                 e.Cancel = true;
-                Warn("Das Spiel läuft noch. Bitte zuerst das Spielfenster schließen.");
+                Warn("The game is still running. Please close the game window first.");
                 break;
             case Activity.Updating when !CancelButton.IsEnabled:
                 e.Cancel = true;
-                Warn("Der Launcher ist noch beschäftigt. Bitte kurz warten.");
+                Warn("The launcher is still busy. Please wait a moment.");
                 break;
             case Activity.Updating:
             case Activity.Warming:
                 e.Cancel = true;
-                var question = _activity == Activity.Warming ? "Das Warmup läuft noch. Abbrechen und schließen?"
-                    : Volatile.Read(ref _downloadPercent) >= 0 ? "Das Update wird noch geladen. Abbrechen und schließen?"
-                    : "Auschecken oder Build laufen noch. Abbrechen und schließen?";
+                var question = _activity == Activity.Warming ? "The warmup is still running. Cancel it and close?"
+                    : Volatile.Read(ref _downloadPercent) >= 0 ? "The update is still downloading. Cancel it and close?"
+                    : "The checkout or build is still running. Cancel it and close?";
                 if (MessageBox.Show(this, question, Title, MessageBoxButton.YesNo, MessageBoxImage.Question,
                         MessageBoxResult.No) == MessageBoxResult.Yes && _cancel is { } cancel)
                 {

@@ -213,7 +213,7 @@ public class AppUpdateTests : IDisposable
     public async Task Takes_only_the_launcher_out_of_the_zip()
     {
         File.WriteAllText(Exe, "old");
-        var zip = Zip(("LIESMICH.txt", "read me"), (@"..\evil.txt", "evil"), ("sub/VictoryLauncher.exe", "wrong"),
+        var zip = Zip(("README.txt", "read me"), (@"..\evil.txt", "evil"), ("sub/VictoryLauncher.exe", "wrong"),
             ("VictoryLauncher.exe", "new"));
 
         var fresh = await Download(zip, Info(zip));

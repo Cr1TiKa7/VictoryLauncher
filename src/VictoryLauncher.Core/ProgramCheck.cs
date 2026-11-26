@@ -82,11 +82,11 @@ public static class ProgramCheck
 
         var reasons = new List<string>();
         if (vram >= ListedVram)
-            reasons.Add(vram >= HighVram ? "Videospeicher hoch" : "Videospeicher mittel");
+            reasons.Add(vram >= HighVram ? "high video memory" : "medium video memory");
         if (cpu >= BusyCpuPercent)
-            reasons.Add("CPU aktiv");
+            reasons.Add("busy CPU");
         if (ramIsTight && memory >= ListedPrivate)
-            reasons.Add("viel Arbeitsspeicher");
+            reasons.Add("high RAM use");
         if (reasons.Count == 0)
             return null;
 

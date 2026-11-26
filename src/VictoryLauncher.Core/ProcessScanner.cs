@@ -4,7 +4,7 @@ using System.Text.RegularExpressions;
 
 namespace VictoryLauncher.Core;
 
-/// <param name="Warning">A German note when part of the scan did not work, otherwise null.</param>
+/// <param name="Warning">A note when part of the scan did not work, otherwise null.</param>
 public sealed record ScanResult(IReadOnlyList<ProcessInfo> Processes, int OwnSession, long FreeRamBytes, string? Warning);
 
 /// <summary>Reads what the processes of this Windows session hold. Changes nothing.</summary>
@@ -244,7 +244,7 @@ internal static partial class GpuMemory
         return result;
     }
 
-    private static string Failed(uint status) => $"Der Videospeicher je Programm ist nicht lesbar (Fehler 0x{status:X8}).";
+    private static string Failed(uint status) => $"The video memory per program cannot be read (error 0x{status:X8}).";
 
     [StructLayout(LayoutKind.Sequential)]
     private struct CounterItem

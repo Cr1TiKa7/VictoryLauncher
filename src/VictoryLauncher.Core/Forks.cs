@@ -44,7 +44,7 @@ public sealed record ForkProfile
     /// <summary>Where the fingerprint for the warmup hint looks; null: the usual folders of the layout.</summary>
     public IReadOnlyList<string>? SourcePaths { get; init; }
 
-    /// <summary>A German note shown with the fork.</summary>
+    /// <summary>A note shown with the fork.</summary>
     public string Note { get; init; } = "";
 
     public bool IsCustom { get; init; }
@@ -69,15 +69,15 @@ public static partial class ForkCatalog
             Warm = WarmKind.GameFiles, OwnDataDir = false,
             // its table is sized for bigger cards
             Settings = Table("CARD_BUFFERS_MB=1024"),
-            Note = "Einstellungen aus crates\\anyxboxx\\src\\run\\settings.rs (die Werte von \"anyxboxx run\"), " +
-                   "sie wandern mit den Updates mit.",
+            Note = "Settings from crates\\anyxboxx\\src\\run\\settings.rs (the values of \"anyxboxx run\"), " +
+                   "they follow the updates.",
         },
         new()
         {
             Id = "klbf-lab", Name = "klbf-lab (PastiiJay)", Url = "https://github.com/PastiiJay/klbf-lab",
             Settings = Table("LATE_WAIT=1", "WIDE_BACK=1", "PIPELINE_WAIT_MS=24", "RELAY_COPY_QUEUE=0"),
-            Note = "Auf AMD abgestimmt. Ohne Series-S-Profil, weil dafür AMDs FidelityFX SDK nötig wäre. " +
-                   "Startbild und Menü können schwarz bleiben, dann am Controller A drücken.",
+            Note = "Tuned for AMD. Without the Series S profile, which would need AMD's FidelityFX SDK. " +
+                   "The start screen and the menu may stay black, then press A on the controller.",
         },
         new()
         {
@@ -89,8 +89,8 @@ public static partial class ForkCatalog
                 "THIN_THREADS=12", "UNDER_THREADS=8", "LAND_THREADS=6", "MAP_THREADS=auto", "PLACED_ORDER=1",
                 "WAVE_WIDE_ONLY=6f225b641c5b0708,5dc3b25986622949,369cbe906ea72764,2cc4c197ee29e291",
                 "THIN=1", "JOIN_PARTS=8", "UPLOAD_AHEAD=1", "INDIRECT_BATCH=2", "FULLSCREEN=1"),
-            Note = "Einstellungen aus seinem play.ps1 für NVIDIA (gemessen auf RTX 4090 mit 16 Kernen). " +
-                   "Vollbild, F11 wechselt ins Fenster. Der Autor rechnet mit viel Arbeitsspeicher.",
+            Note = "Settings from its play.ps1 for NVIDIA (measured on an RTX 4090 with 16 cores). " +
+                   "Full screen, F11 switches to a window. The author expects plenty of RAM.",
         },
         new()
         {
@@ -101,7 +101,7 @@ public static partial class ForkCatalog
                 "INDIRECT_WINDOW=1", "RELAY_COPY=1", "CARD_STEPS=2", "INDIRECT_BATCH=2", "MAP_THREADS=1",
                 "TITLE_PRIORITIES=0", "CARD_AWAKE=1", "SHOW_AFTER=1", "AMBIENT=0.8", "D3D12_DRED=light",
                 "THIN=1", "JOIN_PARTS=8", "UPLOAD_AHEAD=1"),
-            Note = "Für eine AMD RX 7900 XTX abgestimmt. Auf NVIDIA nicht vom Autor gemessen.",
+            Note = "Tuned for an AMD RX 7900 XTX. The author has not measured it on NVIDIA.",
         },
         new()
         {
@@ -114,9 +114,9 @@ public static partial class ForkCatalog
             Exe = @"target\release\native\kelvaroq-engine.exe", RunsFromExeFolder = true,
             SourcePaths = ["src", "native", "scripts", "build.rs", "Cargo.toml", "Cargo.lock"],
             Settings = Table("TEXTURE_STAGE_MB=128", "CARD_BUFFERS_MB=512", "QUEUE2_LANDING_MB=64", "WIDE_THREADS=8"),
-            Note = "Eigener Aufbau: braucht zusätzlich Python 3.11+ und das Windows SDK. Der zweite Build-Schritt " +
-                   "lädt einen festen Stand von fxceless/victory-fork, spielt Patches ein und hängt dafür " +
-                   "vorübergehend ein Laufwerk ein (subst). Er lässt sich nicht abbrechen.",
+            Note = "Its own layout: also needs Python 3.11+ and the Windows SDK. The second build step " +
+                   "downloads a fixed state of fxceless/victory-fork, applies patches and temporarily maps " +
+                   "a drive for that (subst). It cannot be cancelled.",
         },
         new()
         {
@@ -125,13 +125,13 @@ public static partial class ForkCatalog
                 "RELAY=0", "FILL_WAIT=1", "CARD_BUFFERS_MB=1024", "TEXTURE_BUDGET_MB=5120", "PAGE_WRITES=slots",
                 "AMBIENT=0.6", "TEXTURE_NO_WAIT=1", "WIDE_REFRESH=1", "WIDE_MERGE=1", "JOIN_COPIES=1",
                 "DISPLAY_MODE=1920x1080"),
-            Note = "Das Preset des Autors für Karten mit 8 GB, das für 16 GB ist für 10 GB zu groß.",
+            Note = "The author's preset for 8 GB cards, the one for 16 GB is too large for 10 GB.",
         },
         new()
         {
             Id = "victory-fork", Name = "victory-fork (fxceless)", Url = "https://github.com/fxceless/victory-fork",
             Settings = Table("TEXTURE_BACK=1"),
-            Note = "Laut Autor gemessen auf einer RTX 4070 mit 12 GB.",
+            Note = "According to the author, measured on an RTX 4070 with 12 GB.",
         },
     ];
 
@@ -154,7 +154,7 @@ public static partial class ForkCatalog
             Url = url,
             RuntimeDir = null,
             IsCustom = true,
-            Note = "Eigene URL: ohne besondere Einstellungen, es gelten die Standardwerte der Runtime.",
+            Note = "Own URL: no special settings, the defaults of the runtime apply.",
         };
     }
 
@@ -176,26 +176,26 @@ public static partial class ForkCatalog
 /// <summary>Addresses of repositories whose code the launcher will run.</summary>
 public static class GitUrl
 {
-    private const string Example = "https://github.com/name/projekt";
+    private const string Example = "https://github.com/name/project";
 
-    /// <returns>The address in its stored form, or a German reason why it is refused.</returns>
+    /// <returns>The address in its stored form, or the reason why it is refused.</returns>
     public static (string? Url, string? Error) Parse(string? text)
     {
         var typed = (text ?? "").Trim();
         if (typed.Any(c => char.IsWhiteSpace(c) || char.IsControl(c))
             || !typed.StartsWith("https://", StringComparison.OrdinalIgnoreCase)
             || !Uri.TryCreate(typed, UriKind.Absolute, out var uri) || uri.Host.Length == 0)
-            return (null, $"Bitte eine https-Adresse eingeben, z. B. {Example}");
+            return (null, $"Please enter an https address, for example {Example}");
         if (uri.UserInfo.Length > 0)
-            return (null, "Die Adresse darf keine Zugangsdaten enthalten.");
+            return (null, "The address must not contain credentials.");
         if (uri.Query.Length > 0 || uri.Fragment.Length > 0)
-            return (null, $"Bitte nur die Adresse des Repositorys eingeben, z. B. {Example}");
+            return (null, $"Please enter only the address of the repository, for example {Example}");
 
         var path = Trimmed(uri.AbsolutePath);
         var parts = path.Split('/', StringSplitOptions.RemoveEmptyEntries);
         var github = uri.Host.Equals("github.com", StringComparison.OrdinalIgnoreCase);
         if (parts.Length < 2 || (github && parts.Length != 2))
-            return (null, $"Bitte die Adresse des Repositorys eingeben, z. B. {Example}");
+            return (null, $"Please enter the address of the repository, for example {Example}");
 
         return ($"https://{uri.Authority}/{string.Join('/', parts)}", null);
     }

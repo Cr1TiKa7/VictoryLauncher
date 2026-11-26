@@ -79,12 +79,12 @@ public static class WarmPlan
         };
     }
 
-    /// <returns>A German sentence about the kind, or an empty string.</returns>
+    /// <returns>A sentence about the kind, or an empty string.</returns>
     public static string About(WarmKind kind) => kind switch
     {
-        WarmKind.None => "Dieser Fork hat keinen Warmup-Befehl. Die Shader entstehen während des Spielens.",
-        WarmKind.ShadersThenPipelines => "Das Warmup übersetzt die Shader und baut danach die Pipelines, die frühere " +
-                                         "Spielläufe benutzt haben. Vor dem ersten Lauf gibt es davon noch keine.",
+        WarmKind.None => "This fork has no warmup command. The shaders are built while you play.",
+        WarmKind.ShadersThenPipelines => "The warmup translates the shaders and then builds the pipelines that earlier " +
+                                         "game runs used. Before the first run there are none yet.",
         _ => "",
     };
 }

@@ -9,7 +9,7 @@ public static class ForkCheckout
 
     public static bool Exists(string repoDir) => Directory.Exists(Path.Combine(repoDir, ".git"));
 
-    /// <returns>Null when <paramref name="repoDir"/> holds a checkout of <paramref name="url"/>, else a German reason.</returns>
+    /// <returns>Null when <paramref name="repoDir"/> holds a checkout of <paramref name="url"/>, else the reason why not.</returns>
     public static async Task<string?> EnsureAsync(string git, string url, string repoDir, Action<string> log,
         CancellationToken cancel)
     {
@@ -18,11 +18,11 @@ public static class ForkCheckout
             var (code, lines) = await Git(git, repoDir, log, cancel, "remote", "get-url", "origin");
             if (code == 0 && lines.Count > 0 && GitUrl.Same(lines[0], url))
                 return null;
-            return $"Im Checkout-Ordner liegt ein anderes Repository ({(code == 0 ? lines.FirstOrDefault() : "ohne origin")}). " +
-                   $"Bitte einen anderen Ordner wählen: {repoDir}";
+            return $"The checkout folder holds a different repository ({(code == 0 ? lines.FirstOrDefault() : "without origin")}). " +
+                   $"Please choose another folder: {repoDir}";
         }
         if (File.Exists(repoDir) || (Directory.Exists(repoDir) && Directory.EnumerateFileSystemEntries(repoDir).Any()))
-            return $"Der Checkout-Ordner ist nicht leer und kein Git-Checkout: {repoDir}";
+            return $"The checkout folder is not empty and not a git checkout: {repoDir}";
 
         var target = Path.TrimEndingDirectorySeparator(Path.GetFullPath(repoDir));
         var parent = Path.GetDirectoryName(target)!;
@@ -35,7 +35,7 @@ public static class ForkCheckout
             limit.CancelAfter(CloneLimit);
             var (code, lines) = await Git(git, parent, log, limit.Token, "clone", "--", url, partial);
             if (code != 0)
-                return "Auschecken fehlgeschlagen.\n" + string.Join('\n', lines.TakeLast(8));
+                return "Checkout failed.\n" + string.Join('\n', lines.TakeLast(8));
             if (Directory.Exists(target))
                 Directory.Delete(target); // empty, checked above; not recursive on purpose
             Directory.Move(partial, target);
@@ -43,7 +43,7 @@ public static class ForkCheckout
         }
         catch (OperationCanceledException) when (!cancel.IsCancellationRequested)
         {
-            return "Auschecken fehlgeschlagen: Es hat zu lange gedauert.";
+            return "Checkout failed: it took too long.";
         }
         finally
         {
@@ -65,7 +65,7 @@ public static class ForkCheckout
         }
         catch (Exception e) when (e is IOException or UnauthorizedAccessException)
         {
-            log($"Reste eines abgebrochenen Klons blieben liegen: {partial} ({e.Message})");
+            log($"Leftovers of a cancelled clone were not removed: {partial} ({e.Message})");
         }
     }
 

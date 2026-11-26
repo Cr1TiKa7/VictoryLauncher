@@ -23,7 +23,7 @@ public partial class MainWindow
     private static bool CanUpdate => OwnVersion != ReleaseVersion.Local && IsSingleFile;
 
     private static string WindowName =>
-        OwnVersion == ReleaseVersion.Local ? "VictoryLauncher (Eigenbau)" : $"VictoryLauncher {OwnVersion}";
+        OwnVersion == ReleaseVersion.Local ? "VictoryLauncher (local build)" : $"VictoryLauncher {OwnVersion}";
 
     private UpdateInfo? _update;
     private int _downloadPercent = -1;
@@ -42,12 +42,12 @@ public partial class MainWindow
             if (update is null)
                 return;
             _update = update;
-            UpdateText.Text = $"Version {update.Version} ist da, du hast {OwnVersion}.";
+            UpdateText.Text = $"Version {update.Version} is out, you have {OwnVersion}.";
             UpdateBar.Visibility = Visibility.Visible;
         }
         catch (Exception e)
         {
-            _log.Add("Suche nach Updates fehlgeschlagen: " + e.Message);
+            _log.Add("Update check failed: " + e.Message);
         }
     }
 
@@ -63,8 +63,8 @@ public partial class MainWindow
         try
         {
             _log.Open(Path.Combine(Home, "logs", "selfupdate.log"));
-            _log.Add($"Update von {OwnVersion} auf {update.Version}: {update.Download}");
-            StatusText.Text = $"Lade Version {update.Version} …";
+            _log.Add($"Update from {OwnVersion} to {update.Version}: {update.Download}");
+            StatusText.Text = $"Downloading version {update.Version} …";
             WarmBar.Value = 0;
             AllowCancel(true);
             var token = limited.Token;
@@ -86,20 +86,20 @@ public partial class MainWindow
             // restart come first, and the swap is the last step.
             SaveSettings();
             var restart = RestartOf(exe);
-            _log.Add($"Version {update.Version} ist geladen, tausche und starte neu.");
+            _log.Add($"Version {update.Version} is downloaded, swapping and restarting.");
             _successor = (restart, AppUpdate.Swap(fresh, exe));
         }
         catch (OperationCanceledException)
         {
             StatusText.Text = cancel.IsCancellationRequested
-                ? "Update abgebrochen."
-                : "Der Download hat zu lange gedauert, bitte später noch einmal versuchen.";
+                ? "Update cancelled."
+                : "The download took too long, please try again later.";
         }
         catch (Exception problem)
         {
             _log.Add(problem.ToString());
-            StatusText.Text = "Update fehlgeschlagen: " + problem.Message;
-            Warn("Das Update ist fehlgeschlagen, der Launcher bleibt, wie er ist.\n\n" + problem.Message);
+            StatusText.Text = "Update failed: " + problem.Message;
+            Warn("The update failed, the launcher stays as it is.\n\n" + problem.Message);
         }
         finally
         {
@@ -134,13 +134,13 @@ public partial class MainWindow
             try
             {
                 AppUpdate.Restore(successor.Old, successor.Start.FileName);
-                aftermath = "Die alte Version ist wieder an ihrem Platz.";
+                aftermath = "The old version is back in place.";
             }
             catch (Exception e) when (e is IOException or UnauthorizedAccessException)
             {
-                aftermath = $"Die alte Version liegt hier: {successor.Old}";
+                aftermath = $"The old version is here: {successor.Old}";
             }
-            MessageBox.Show($"Die neue Version ließ sich nicht starten. {aftermath}\n\n{problem.Message}",
+            MessageBox.Show($"The new version could not be started. {aftermath}\n\n{problem.Message}",
                 "VictoryLauncher", MessageBoxButton.OK, MessageBoxImage.Warning);
         }
     }

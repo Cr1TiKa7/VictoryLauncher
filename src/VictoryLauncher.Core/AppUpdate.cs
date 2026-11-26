@@ -56,7 +56,7 @@ public static partial class AppUpdate
     [GeneratedRegex(@"\Asha256:(?<hash>[0-9a-fA-F]{64})\z")]
     private static partial Regex Digest();
 
-    /// <returns>The update to offer, if any, and a German line for the log.</returns>
+    /// <returns>The update to offer, if any, and a line for the log.</returns>
     public static (UpdateInfo? Update, string Note) ReadLatest(string json, Version current)
     {
         Release? release;
@@ -66,33 +66,33 @@ public static partial class AppUpdate
         }
         catch (JsonException)
         {
-            return (null, "Suche nach Updates: Die Antwort von GitHub ließ sich nicht lesen.");
+            return (null, "Update check: the answer from GitHub could not be read.");
         }
 
         if (current == ReleaseVersion.Local)
-            return (null, "Eigenbau, er wird nicht aktualisiert.");
+            return (null, "Local build, it is not updated.");
         if (release is null || release.Draft || release.Prerelease || ReleaseVersion.Parse(release.TagName) is not { } version)
-            return (null, $"Suche nach Updates: Das neueste Release hat keine Version, mit der sich vergleichen lässt ({release?.TagName}).");
+            return (null, $"Update check: the latest release has no version to compare with ({release?.TagName}).");
         if (version <= current)
-            return (null, $"Der Launcher ist aktuell ({current}).");
+            return (null, $"The launcher is up to date ({current}).");
 
         var name = $"{ProgramName}-v{version}-win-x64.zip";
         var asset = release.Assets?.FirstOrDefault(a => a?.Name == name);
         if (asset is null)
-            return (null, $"Version {version} ist da, aber ohne {name}.");
+            return (null, $"Version {version} is out, but without {name}.");
 
         var digest = Digest().Match(asset.Digest ?? "");
         if (!digest.Success)
-            return (null, $"Version {version} ist da, aber ohne SHA-256-Prüfsumme. Sie wird nicht angeboten.");
+            return (null, $"Version {version} is out, but without a SHA-256 checksum. It is not offered.");
         if (asset.Size is <= 0 or > LargestZip)
-            return (null, $"Version {version} ist da, aber ihre Größe ist unglaubwürdig ({asset.Size} Bytes).");
+            return (null, $"Version {version} is out, but its size is implausible ({asset.Size} bytes).");
         // Uri resolves dot segments, so the comparison is with the address that would really be asked.
         if (!Uri.TryCreate(asset.BrowserDownloadUrl, UriKind.Absolute, out var url)
             || !url.AbsoluteUri.Equals($"{DownloadRoot}{release.TagName}/{name}", StringComparison.OrdinalIgnoreCase))
-            return (null, $"Version {version} ist da, aber ihr Download zeigt nicht auf dieses Repository.");
+            return (null, $"Version {version} is out, but its download does not point to this repository.");
 
         return (new(version, url, digest.Groups["hash"].Value.ToLowerInvariant(), asset.Size),
-            $"Version {version} ist da (diese ist {current}).");
+            $"Version {version} is out (this is {current}).");
     }
 
     /// <summary>Asks GitHub for the newest release. Never throws for anything the network can do.</summary>
@@ -107,18 +107,18 @@ public static partial class AppUpdate
             request.Headers.Accept.ParseAdd("application/vnd.github+json");
             using var response = await http.SendAsync(request, within.Token);
             if (response.StatusCode == HttpStatusCode.NotFound)
-                return (null, "Suche nach Updates: Es gibt noch kein Release.");
+                return (null, "Update check: there is no release yet.");
             if (!response.IsSuccessStatusCode)
-                return (null, $"Suche nach Updates: GitHub antwortet mit {(int)response.StatusCode}.");
+                return (null, $"Update check: GitHub answers with {(int)response.StatusCode}.");
             return ReadLatest(await response.Content.ReadAsStringAsync(within.Token), current);
         }
         catch (OperationCanceledException)
         {
-            return (null, "Suche nach Updates: keine Antwort von GitHub.");
+            return (null, "Update check: no answer from GitHub.");
         }
         catch (Exception e) when (e is HttpRequestException or IOException)
         {
-            return (null, "Suche nach Updates nicht möglich: " + e.Message);
+            return (null, "Update check not possible: " + e.Message);
         }
     }
 
@@ -149,7 +149,7 @@ public static partial class AppUpdate
                 {
                     received += read;
                     if (received > update.Size)
-                        throw new InvalidDataException("Der Download ist größer als angekündigt.");
+                        throw new InvalidDataException("The download is larger than announced.");
                     hash.AppendData(buffer, 0, read);
                     await target.WriteAsync(buffer.AsMemory(0, read), cancel);
                     progress?.Invoke(received, update.Size);
@@ -158,13 +158,13 @@ public static partial class AppUpdate
             }
 
             if (received != update.Size)
-                throw new InvalidDataException("Der Download ist unvollständig.");
+                throw new InvalidDataException("The download is incomplete.");
             if (!Convert.ToHexString(hash.GetHashAndReset()).Equals(update.Sha256, StringComparison.OrdinalIgnoreCase))
-                throw new InvalidDataException("Die Prüfsumme des Downloads stimmt nicht.");
+                throw new InvalidDataException("The checksum of the download does not match.");
 
             // Only this one entry is written, to a path chosen here: nothing else in the zip can land anywhere.
             using (var zip = ZipFile.OpenRead(zipPath))
-                (zip.GetEntry(ExeInZip) ?? throw new InvalidDataException($"In der ZIP fehlt {ExeInZip}."))
+                (zip.GetEntry(ExeInZip) ?? throw new InvalidDataException($"{ExeInZip} is missing in the ZIP."))
                     .ExtractToFile(fresh);
             complete = true;
             return fresh;

@@ -205,50 +205,50 @@ public static class PathCheck
     public const string GameExeName = "game_scarlett_master.exe";
 
     /// <summary>What has to hold before a fork is checked out or built. No game is needed for that.</summary>
-    /// <returns>A German message for the user, or null.</returns>
+    /// <returns>A message for the user, or null.</returns>
     public static string? RepoFolder(ForkSetup s)
     {
         if (!Path.IsPathFullyQualified(s.RepoDir))
-            return "Bitte einen vollständigen Pfad für den Checkout-Ordner angeben.";
+            return "Please enter a full path for the checkout folder.";
         if (Path.IsPathFullyQualified(s.GameDir) && IsInside(s.RepoDir, s.GameDir))
-            return "Der Checkout darf nicht im Spielordner liegen, dort wird nichts geschrieben.";
+            return "The checkout must not be inside the game folder, nothing is written there.";
         return null;
     }
 
     /// <summary>What has to hold before the game's files are read or anything is written for a run.</summary>
-    /// <returns>A German message for the user, or null.</returns>
+    /// <returns>A message for the user, or null.</returns>
     public static string? Folders(ForkSetup s)
     {
         if (!Path.IsPathFullyQualified(s.GameDir) || !File.Exists(s.GameExe()))
-            return $"Im Spielordner fehlt {GameExeName}: {s.GameDir}";
+            return $"{GameExeName} is missing in the game folder: {s.GameDir}";
         if (RepoFolder(s) is { } problem)
             return problem;
         if (!Path.IsPathFullyQualified(s.CacheDir))
-            return "Bitte einen vollständigen Pfad für den Cache angeben.";
+            return "Please enter a full path for the cache.";
         if (IsInside(s.CacheDir, s.RepoDir))
-            return "Der Cache darf nicht im Checkout liegen (die Runtime lehnt das ab).";
+            return "The cache must not be inside the checkout (the runtime refuses that).";
         if (IsInside(s.CacheDir, s.GameDir))
-            return "Der Cache darf nicht im Spielordner liegen, dort wird nichts geschrieben.";
+            return "The cache must not be inside the game folder, nothing is written there.";
         if (s.DataDir is { } data)
         {
             if (!Path.IsPathFullyQualified(data))
-                return "Der Ordner für die Spielstände (DataRoot in settings.json) ist kein vollständiger Pfad.";
+                return "The folder for the save games (DataRoot in settings.json) is not a full path.";
             if (IsInside(data, s.RepoDir) || IsInside(data, s.GameDir))
-                return "Die Spielstände dürfen weder im Checkout noch im Spielordner liegen.";
+                return "The save games must not be inside the checkout or the game folder.";
         }
         return null;
     }
 
     /// <summary>What the checkout has to contain.</summary>
-    /// <returns>A German message for the user, or null.</returns>
+    /// <returns>A message for the user, or null.</returns>
     public static string? Checkout(ForkSetup s)
     {
         if (s.RuntimeDir() is not { } runtime)
-            return $"Kein VIctory-Aufbau erkannt (apps\\victory fehlt, auch unter third_party\\victory): {s.RepoDir}";
+            return $"No VIctory layout found (apps\\victory is missing, also below third_party\\victory): {s.RepoDir}";
         if (!File.Exists(Path.Combine(runtime, "Cargo.toml")))
-            return $"Im Checkout fehlt Cargo.toml: {runtime}";
+            return $"Cargo.toml is missing in the checkout: {runtime}";
         if (s.TuningFile() is { } file && !File.Exists(file))
-            return $"Im Checkout fehlt {s.Fork.TuningFile}: {s.RepoDir}";
+            return $"{s.Fork.TuningFile} is missing in the checkout: {s.RepoDir}";
         return null;
     }
 

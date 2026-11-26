@@ -60,7 +60,7 @@ jobs:
         env:
           TAG: ${{ steps.version.outputs.tag }}
         run: |
-          Copy-Item packaging/LIESMICH.txt publish
+          Copy-Item packaging/README.txt publish
           $name = if ($env:TAG) { $env:TAG } else { $env:GITHUB_SHA.Substring(0, 7) }
           Compress-Archive -Path publish/* -DestinationPath "VictoryLauncher-$name-win-x64.zip"
 

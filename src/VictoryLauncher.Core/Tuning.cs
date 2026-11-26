@@ -33,8 +33,8 @@ public static partial class Tuning
         // Whatever is left besides commas is an entry in a form this parser does not know.
         if (!found.Success || entries.Count == 0 || Entry().Replace(body, "").Any(c => c != ',' && !char.IsWhiteSpace(c)))
             throw new InvalidDataException(
-                $"Die Einstellungstabelle {table} in settings.rs von AnyXboxX wurde nicht vollständig gelesen. " +
-                "Die Datei hat sich vermutlich geändert.");
+                $"The settings table {table} in settings.rs of AnyXboxX was not read completely. " +
+                "The file has probably changed.");
         return entries;
     }
 }

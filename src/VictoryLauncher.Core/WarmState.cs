@@ -27,14 +27,14 @@ public static class WarmState
     private static string Folder(string path) => Path.TrimEndingDirectorySeparator(path).ToUpperInvariant();
 
     /// <param name="current">The fingerprint of the next run, or null while it is unknown.</param>
-    /// <returns>The German hint to show, or an empty string.</returns>
+    /// <returns>The hint to show, or an empty string.</returns>
     public static string Hint(ForkState state, string? current)
     {
         if (current is null || state.LastWarmFingerprint == current)
             return "";
         return state.LastWarmCommit is null
-            ? "Noch kein Warmup mit diesem Launcher. Vor dem ersten Start wird ein Warmup empfohlen."
-            : "Seit dem letzten Warmup haben sich die Runtime, die Einstellungen oder die Ordner geändert. " +
-              "Ein neues Warmup wird empfohlen.";
+            ? "No warmup with this launcher yet. A warmup is recommended before the first start."
+            : "The runtime, the settings or the folders have changed since the last warmup. " +
+              "A new warmup is recommended.";
     }
 }
