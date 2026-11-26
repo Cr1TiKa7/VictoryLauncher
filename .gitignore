@@ -1,0 +1,15 @@
+# build output
+bin/
+obj/
+/app/
+/dist/
+/publish/
+*.zip
+
+# written next to the exe at run time
+settings.json
+logs/
+
+# editors
+.vs/
+*.user

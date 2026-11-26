@@ -1,0 +1,81 @@
+﻿<Window x:Class="VictoryLauncher.MainWindow"
+        xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        xmlns:local="clr-namespace:VictoryLauncher"
+        Title="VictoryLauncher" Width="940" Height="900" MinWidth="760" MinHeight="720"
+        WindowStartupLocation="CenterScreen" Foreground="{StaticResource Ink}" UseLayoutRounding="True">
+    <Window.Background>
+        <LinearGradientBrush StartPoint="0,0" EndPoint="0,1">
+            <GradientStop Color="#FF1B0A2A" Offset="0.2" />
+            <GradientStop Color="#FF10051B" Offset="1" />
+        </LinearGradientBrush>
+    </Window.Background>
+
+    <DockPanel>
+        <local:SunsetHeader DockPanel.Dock="Top" />
+
+        <DockPanel Margin="24,6,24,20">
+            <Grid DockPanel.Dock="Top">
+                <Grid.ColumnDefinitions>
+                    <ColumnDefinition Width="Auto" />
+                    <ColumnDefinition Width="*" />
+                    <ColumnDefinition Width="Auto" />
+                </Grid.ColumnDefinitions>
+                <Grid.RowDefinitions>
+                    <RowDefinition Height="Auto" />
+                    <RowDefinition Height="Auto" />
+                    <RowDefinition Height="Auto" />
+                    <RowDefinition Height="Auto" />
+                    <RowDefinition Height="Auto" />
+                    <RowDefinition Height="Auto" />
+                    <RowDefinition Height="Auto" />
+                </Grid.RowDefinitions>
+
+                <TextBlock Grid.Row="0" Style="{StaticResource Label}" Text="FORK" />
+                <ComboBox Grid.Row="0" Grid.Column="1" x:Name="ForkBox" SelectionChanged="Fork_Changed" Margin="0,0,0,8" />
+                <Button Grid.Row="0" Grid.Column="2" x:Name="RemoveForkButton" Content="ENTFERNEN" Width="96" Padding="4,4"
+                        Margin="8,0,0,8" Visibility="Hidden" Click="RemoveFork_Click" />
+
+                <TextBlock Grid.Row="1" x:Name="UrlLabel" Style="{StaticResource Label}" Text="GIT-URL" Visibility="Collapsed" />
+                <TextBox Grid.Row="1" Grid.Column="1" x:Name="UrlBox" Style="{StaticResource PathBox}" Visibility="Collapsed"
+                         KeyDown="Url_KeyDown" />
+                <Button Grid.Row="1" Grid.Column="2" x:Name="AddUrlButton" Content="HINZUFÜGEN" Width="96" Padding="4,4"
+                        Margin="8,0,0,8" Visibility="Collapsed" Click="AddUrl_Click" />
+
+                <TextBlock Grid.Row="2" Grid.Column="1" Grid.ColumnSpan="2" x:Name="ForkNote" Style="{StaticResource Note}" />
+
+                <TextBlock Grid.Row="3" Style="{StaticResource Label}" Text="VERSION" />
+                <TextBlock Grid.Row="3" Grid.Column="1" x:Name="VersionText" VerticalAlignment="Center" TextWrapping="Wrap"
+                           Foreground="{StaticResource Teal}" Margin="1,0,0,8" />
+                <Button Grid.Row="3" Grid.Column="2" x:Name="CheckButton" Content="PRÜFEN" Width="96" Padding="4,4"
+                        Margin="8,0,0,8" Click="Check_Click" />
+
+                <TextBlock Grid.Row="4" Style="{StaticResource Label}" Text="SPIELORDNER" />
+                <TextBox Grid.Row="4" Grid.Column="1" x:Name="GameBox" Style="{StaticResource PathBox}" TextChanged="Paths_Changed" />
+                <Button Grid.Row="4" Grid.Column="2" x:Name="GameBrowse" Content="…" Width="96" Margin="8,0,0,8" Click="BrowseGame_Click" />
+
+                <TextBlock Grid.Row="5" Style="{StaticResource Label}" Text="CACHE-ORDNER" />
+                <TextBox Grid.Row="5" Grid.Column="1" x:Name="CacheBox" Style="{StaticResource PathBox}" TextChanged="Paths_Changed" />
+                <Button Grid.Row="5" Grid.Column="2" x:Name="CacheBrowse" Content="…" Width="96" Margin="8,0,0,8" Click="BrowseCache_Click" />
+
+                <TextBlock Grid.Row="6" Style="{StaticResource Label}" Text="CHECKOUT-ORDNER" />
+                <TextBox Grid.Row="6" Grid.Column="1" x:Name="RepoBox" Style="{StaticResource PathBox}" TextChanged="Paths_Changed" />
+                <Button Grid.Row="6" Grid.Column="2" x:Name="RepoBrowse" Content="…" Width="96" Margin="8,0,0,8" Click="BrowseRepo_Click" />
+            </Grid>
+
+            <TextBlock DockPanel.Dock="Top" x:Name="HintText" Foreground="{StaticResource Amber}" TextWrapping="Wrap" Margin="0,2,0,10" />
+
+            <DockPanel DockPanel.Dock="Top">
+                <Button DockPanel.Dock="Left" x:Name="WarmButton" Content="WARMUP" Width="130" MinHeight="34" Click="Warm_Click" />
+                <Button DockPanel.Dock="Right" x:Name="CancelButton" Content="ABBRECHEN" Width="110" Margin="10,0,0,0" IsEnabled="False" Click="Cancel_Click" />
+                <ProgressBar x:Name="WarmBar" Height="16" Margin="12,0,0,0" Minimum="0" Maximum="100" />
+            </DockPanel>
+            <TextBlock DockPanel.Dock="Top" x:Name="StatusText" TextWrapping="Wrap" Margin="0,8,0,14" Text="Bereit." />
+
+            <Button DockPanel.Dock="Top" x:Name="PlayButton" Content="SPIEL STARTEN" Style="{StaticResource PlayButtonStyle}" Click="Play_Click" />
+
+            <TextBox x:Name="LogBox" Margin="0,16,0,0" Style="{StaticResource LogStyle}" IsReadOnly="True"
+                     VerticalScrollBarVisibility="Auto" HorizontalScrollBarVisibility="Auto" TextWrapping="NoWrap" />
+        </DockPanel>
+    </DockPanel>
+</Window>

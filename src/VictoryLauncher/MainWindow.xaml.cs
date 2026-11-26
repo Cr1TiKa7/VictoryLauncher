@@ -1,0 +1,815 @@
+﻿using System.ComponentModel;
+using System.Diagnostics;
+using System.IO;
+using System.Text.RegularExpressions;
+using System.Windows;
+using System.Windows.Controls;
+using System.Windows.Input;
+using System.Windows.Threading;
+using VictoryLauncher.Core;
+using Microsoft.Win32;
+
+namespace VictoryLauncher;
+
+public partial class MainWindow : Window
+{
+    private enum Activity { Idle, Updating, Warming, Playing }
+
+    /// <summary>An entry of the fork list; without a fork it is the one for typing an own URL.</summary>
+    private sealed record ForkChoice(string Label, ForkProfile? Fork)
+    {
+        public override string ToString() => Label;
+    }
+
+    private static readonly string Home = AppContext.BaseDirectory;
+    private static readonly string SettingsFile = Path.Combine(Home, "settings.json");
+    private static readonly TimeSpan HelpLimit = TimeSpan.FromSeconds(30);
+
+    private readonly LogSink _log = new();
+    private readonly DispatcherTimer _timer = new() { Interval = TimeSpan.FromMilliseconds(250) };
+    private readonly Stopwatch _clock = new();
+
+    private LauncherSettings _settings = LauncherSettings.Load(SettingsFile);
+    private ForkProfile _fork;
+    private Activity _activity = Activity.Idle;
+    private CancellationTokenSource? _cancel;
+    private string _head = "";
+    // What the last check found, and the fork and checkout it belongs to.
+    private (string ForkId, string RepoDir, string? SourceId, WarmKind Warm)? _checked;
+    // The running warmup: the precise progress where a fork reports it, otherwise step and last line.
+    private WarmProgress? _warm;
+    private string _warmStep = "", _warmLine = "";
+    private bool _closeWhenIdle;
+    // True while the launcher itself fills the fields.
+    private bool _showing = true;
+
+    public MainWindow()
+    {
+        InitializeComponent();
+        _fork = _settings.Selected();
+        ListForks();
+        ShowFork();
+        // From here on a change in the list or in a field comes from the user.
+        _showing = false;
+
+        _timer.Tick += (_, _) => Refresh();
+        _timer.Start();
+        // On opening only a fork that is already there and agreed to is touched.
+        Loaded += async (_, _) =>
+        {
+            if (_settings.IsTrusted(_fork) && ForkCheckout.Exists(Setup.RepoDir))
+                await Guard(async () => { await UpdateAndBuild(); });
+        };
+        Closing += OnClosing;
+        Closed += (_, _) => { SaveSettings(); _log.Dispose(); };
+        SetActivity(Activity.Idle);
+    }
+
+    private ForkSetup Setup => _settings.Setup(_fork);
+
+    private ForkState State => _settings.State(_fork.Id);
+
+    /// <summary>True while the list shows the entry for an own URL: then there is no fork to act on.</summary>
+    private bool TypingUrl => ForkBox.SelectedItem is ForkChoice { Fork: null };
+
+    // ---------- fork list ----------
+
+    private void ListForks()
+    {
+        var showing = _showing;
+        _showing = true;
+        var choices = ForkCatalog.All(_settings.CustomUrls).Select(fork => new ForkChoice(fork.Name, fork)).ToList();
+        choices.Add(new("Eigene Git-URL …", null));
+        ForkBox.ItemsSource = choices;
+        ForkBox.SelectedItem = choices.FirstOrDefault(c => c.Fork?.Id == _fork.Id) ?? choices[0];
+        _showing = showing;
+    }
+
+    private void Fork_Changed(object sender, SelectionChangedEventArgs e)
+    {
+        if (_showing || ForkBox.SelectedItem is not ForkChoice choice)
+            return;
+        if (choice.Fork is { } fork)
+        {
+            _fork = fork;
+            _settings = _settings with { SelectedFork = fork.Id };
+            SaveSettings();
+        }
+        ShowFork();
+        SetActivity(_activity);
+        if (choice.Fork is null)
+            UrlBox.Focus();
+    }
+
+    /// <summary>Fills the window for the chosen fork. Nothing is fetched or built here.</summary>
+    private void ShowFork()
+    {
+        var showing = _showing;
+        _showing = true;
+        var setup = Setup;
+        var typing = TypingUrl;
+
+        UrlLabel.Visibility = UrlBox.Visibility = AddUrlButton.Visibility =
+            typing ? Visibility.Visible : Visibility.Collapsed;
+        RemoveForkButton.Visibility = !typing && _fork.IsCustom ? Visibility.Visible : Visibility.Hidden;
+        ForkNote.Text = typing
+            ? "https-Adresse eines Repositorys mit VIctory-Aufbau eingeben, z. B. https://github.com/name/projekt"
+            : string.Join("\n", new[]
+            {
+                _fork.Url,
+                _fork.Note,
+                setup.DataDir is { } data ? $"Spielstände: {data}" : null,
+            }.Where(line => !string.IsNullOrEmpty(line)));
+
+        GameBox.Text = _settings.GameDir;
+        CacheBox.Text = typing ? "" : setup.CacheDir;
+        RepoBox.Text = typing ? "" : setup.RepoDir;
+
+        WarmBar.Value = 0;
+        VersionText.Text = typing ? ""
+            : ForkCheckout.Exists(setup.RepoDir) ? "noch nicht geprüft"
+            : "noch nicht ausgecheckt";
+        StatusText.Text = typing ? "Adresse eingeben und hinzufügen." : "Bereit.";
+        _showing = showing;
+        ShowCheckButton();
+        ShowHint();
+    }
+
+    private void ShowCheckButton() =>
+        CheckButton.Content = !TypingUrl && !ForkCheckout.Exists(Setup.RepoDir) ? "AUSCHECKEN" : "PRÜFEN";
+
+    private void Url_KeyDown(object sender, KeyEventArgs e)
+    {
+        if (e.Key == Key.Enter)
+            AddUrl_Click(sender, e);
+    }
+
+    private void AddUrl_Click(object sender, RoutedEventArgs e)
+    {
+        if (_activity != Activity.Idle)
+            return;
+        var (url, error) = GitUrl.Parse(UrlBox.Text);
+        if (url is null)
+        {
+            Warn(error!);
+            return;
+        }
+        // An address that is already in the list selects that entry, with its settings.
+        var known = ForkCatalog.All(_settings.CustomUrls).FirstOrDefault(f => GitUrl.Same(f.Url, url));
+        if (known is null)
+        {
+            _settings = _settings.AddCustom(url);
+            known = ForkCatalog.Custom(url);
+        }
+        _fork = known;
+        _settings = _settings with { SelectedFork = known.Id };
+        SaveSettings();
+        UrlBox.Text = "";
+        ListForks();
+        ShowFork();
+        SetActivity(Activity.Idle);
+    }
+
+    private void RemoveFork_Click(object sender, RoutedEventArgs e)
+    {
+        if (_activity != Activity.Idle || !_fork.IsCustom || MessageBox.Show(this,
+                $"{_fork.Name} aus der Liste entfernen?\n\nDateien bleiben liegen:\n{Setup.RepoDir}\n{Setup.CacheDir}",
+                Title, MessageBoxButton.YesNo, MessageBoxImage.Question, MessageBoxResult.No) != MessageBoxResult.Yes)
+            return;
+        // The agreement goes with the entry: adding the address again asks again.
+        var forks = new Dictionary<string, ForkState>(_settings.Forks);
+        forks.Remove(_fork.Id);
+        _settings = _settings.RemoveCustom(_fork.Url) with { Forks = forks, SelectedFork = ForkCatalog.DefaultId };
+        _fork = _settings.Selected();
+        SaveSettings();
+        ListForks();
+        ShowFork();
+        SetActivity(Activity.Idle);
+    }
+
+    /// <summary>Asked once per address, before anything of it is checked out, built or run.</summary>
+    private bool Trust()
+    {
+        if (_settings.IsTrusted(_fork))
+            return true;
+        var answer = MessageBox.Show(this,
+            $"{_fork.Name}\n{_fork.Url}\n\n" +
+            "Der Launcher checkt diesen Fork aus, baut ihn und führt ihn aus. Das ist fremder Code, den niemand " +
+            "geprüft hat. Er läuft mit deinen Rechten, schon beim Bauen. Neue Commits werden später ohne weitere " +
+            $"Rückfrage gebaut.\n\n{_fork.Note}\n\nCheckout nach: {Setup.RepoDir}\n\nDiesem Fork vertrauen?",
+            "Fremden Code ausführen?", MessageBoxButton.YesNo, MessageBoxImage.Warning, MessageBoxResult.No);
+        if (answer != MessageBoxResult.Yes)
+            return false;
+        _settings = _settings.With(_fork.Id, State with { TrustedUrl = _fork.Url });
+        SaveSettings();
+        return true;
+    }
+
+    // ---------- buttons ----------
+
+    private async void Check_Click(object sender, RoutedEventArgs e) =>
+        await Guard(async () => { await UpdateAndBuild(askOnFailure: true, onlyCheck: true); });
+
+    private async void Warm_Click(object sender, RoutedEventArgs e) => await Guard(Warm);
+
+    private async void Play_Click(object sender, RoutedEventArgs e) => await Guard(Play);
+
+    private void Cancel_Click(object sender, RoutedEventArgs e)
+    {
+        CancelButton.IsEnabled = false;
+        StatusText.Text = "Breche ab …";
+        _cancel?.Cancel();
+    }
+
+    private void BrowseGame_Click(object sender, RoutedEventArgs e) => Browse(GameBox, "Spielordner wählen");
+
+    private void BrowseCache_Click(object sender, RoutedEventArgs e) => Browse(CacheBox, "Cache-Ordner wählen");
+
+    private void BrowseRepo_Click(object sender, RoutedEventArgs e) => Browse(RepoBox, "Checkout-Ordner wählen");
+
+    private void Browse(TextBox box, string title)
+    {
+        var dialog = new OpenFolderDialog { Title = title };
+        if (Directory.Exists(box.Text))
+            dialog.InitialDirectory = box.Text;
+        if (dialog.ShowDialog(this) == true)
+            box.Text = dialog.FolderName;
+    }
+
+    private void Paths_Changed(object sender, TextChangedEventArgs e)
+    {
+        if (_showing || sender is not TextBox box)
+            return;
+        var folder = box.Text.Trim().Trim('"');
+        if (box == GameBox)
+            _settings = _settings with { GameDir = folder };
+        else if (box == CacheBox)
+            _settings = _settings.With(_fork.Id, State with { CacheDir = folder });
+        else
+            _settings = _settings.With(_fork.Id, State with { RepoDir = folder });
+        ShowCheckButton();
+        ShowHint();
+    }
+
+    // ---------- check out, update and build ----------
+
+    /// <param name="askOnFailure">A click asked for it: say what is wrong in a message.</param>
+    /// <param name="onlyCheck">Nothing is going to be run afterwards, so there is nothing to carry on with.</param>
+    /// <returns>True when warmup or game may go on.</returns>
+    private async Task<bool> UpdateAndBuild(bool askOnFailure = false, bool onlyCheck = false)
+    {
+        var setup = Setup;
+        if (VictoryIsRunning())
+            return Stop("victory.exe läuft bereits. Bitte zuerst beenden.");
+        if (PathCheck.RepoFolder(setup) is { } folderProblem)
+            return Stop(folderProblem);
+        if (!Trust())
+        {
+            StatusText.Text = "Abgebrochen. Nichts wurde ausgecheckt oder gebaut.";
+            return false;
+        }
+        if (Tools.Find("git") is not { } git)
+            return Stop("git wurde nicht gefunden.");
+        var tools = new Dictionary<string, string>();
+        foreach (var name in _fork.Build.Select(step => step.Tool).Distinct())
+        {
+            if (Tools.Find(name) is not { } path)
+                return Stop(name == "cargo"
+                    ? "cargo wurde nicht gefunden (Rust ist nicht installiert)."
+                    : $"{name} wurde nicht gefunden, dieser Fork braucht es zum Bauen.");
+            tools[name] = path;
+        }
+
+        _log.Open(Path.Combine(Home, "logs", "update.log"));
+        _log.Add($"Fork: {_fork.Name} ({_fork.Url}) in {setup.RepoDir}");
+        _clock.Restart();
+        _checked = null;
+        using var cancel = new CancellationTokenSource();
+        _cancel = cancel;
+        WarmBar.IsIndeterminate = true;
+        try
+        {
+            VersionText.Text = "wird geprüft …";
+            StatusText.Text = ForkCheckout.Exists(setup.RepoDir) ? "Prüfe den Checkout …" : "Checke den Fork aus …";
+            AllowCancel(true);
+            var checkoutProblem = await ForkCheckout.EnsureAsync(git, _fork.Url, setup.RepoDir, _log.Add, cancel.Token);
+            AllowCancel(false);
+            if (checkoutProblem is not null)
+                return Stop(checkoutProblem);
+
+            StatusText.Text = "Prüfe auf neue Commits …";
+            var updater = new RepoUpdater(git, setup.RepoDir);
+            var update = await updater.CheckAndPullAsync(_log.Add, CancellationToken.None);
+            _head = update.Head;
+            if (PathCheck.Checkout(setup) is { } layoutProblem)
+                return Stop(layoutProblem);
+            var sourceId = await updater.SourceIdAsync(setup.SourcePaths(), _log.Add, CancellationToken.None);
+
+            var buildOk = await Build(setup, tools, cancel.Token);
+            var warm = File.Exists(setup.ExePath()) ? await WarmKindOf(setup) : WarmKind.None;
+            if (File.Exists(setup.ExePath()))
+                _checked = (_fork.Id, setup.RepoDir, sourceId, warm);
+
+            var commit = _head.Length >= 7 ? _head[..7] : "unbekannt";
+            var state = update.State switch
+            {
+                UpdateState.UpToDate => "neuester Stand",
+                UpdateState.Updated => $"aktualisiert ({update.NewCommits.Count} neue Commits)",
+                UpdateState.CheckFailed => "NICHT geprüft",
+                _ => "NICHT aktuell",
+            };
+            VersionText.Text = $"{commit} · {state} · {(buildOk ? "Release gebaut" : "Build FEHLGESCHLAGEN")}";
+            StatusText.Text = "Bereit.";
+
+            var updateOk = update.State is UpdateState.UpToDate or UpdateState.Updated;
+            if (updateOk && buildOk)
+                return true;
+
+            var problem = string.Join("\n\n", new[]
+            {
+                updateOk ? null : update.Message,
+                buildOk ? null : "Der Build ist fehlgeschlagen, Details in logs\\update.log.",
+            }.Where(text => text is not null));
+            StatusText.Text = problem;
+            if (!askOnFailure)
+                return false;
+            if (onlyCheck || !File.Exists(setup.ExePath()))
+            {
+                Warn(problem);
+                return false;
+            }
+            return MessageBox.Show(this, problem + "\n\nMit dem vorhandenen Programm weitermachen?", Title,
+                MessageBoxButton.YesNo, MessageBoxImage.Warning, MessageBoxResult.No) == MessageBoxResult.Yes;
+        }
+        catch (OperationCanceledException) when (cancel.IsCancellationRequested)
+        {
+            VersionText.Text = "abgebrochen";
+            StatusText.Text = "Abgebrochen.";
+            return false;
+        }
+        finally
+        {
+            _cancel = null;
+            AllowCancel(false);
+            WarmBar.IsIndeterminate = false;
+            ShowCheckButton();
+            ShowHint();
+        }
+
+        bool Stop(string message)
+        {
+            VersionText.Text = message;
+            StatusText.Text = "Nicht bereit.";
+            if (askOnFailure)
+                Warn(message);
+            return false;
+        }
+    }
+
+    /// <summary>Runs the fork's build steps. A step that depends on new commits is left out while nothing changed.</summary>
+    private async Task<bool> Build(ForkSetup setup, IReadOnlyDictionary<string, string> tools, CancellationToken cancel)
+    {
+        var unchanged = State.LastBuiltCommit == _head && _head.Length > 0 && File.Exists(setup.ExePath());
+        for (var i = 0; i < _fork.Build.Count; i++)
+        {
+            var step = _fork.Build[i];
+            if (step.OnlyAfterChanges && unchanged)
+            {
+                _log.Add($"Übersprungen, seit dem letzten Build unverändert: {step.Tool} {string.Join(' ', step.Arguments)}");
+                continue;
+            }
+            var count = _fork.Build.Count > 1 ? $" Schritt {i + 1} von {_fork.Build.Count}." : "";
+            StatusText.Text = "Baue das Release (dauert nur nach Änderungen länger) …" + count;
+            AllowCancel(step.Cancellable);
+            var code = await ProcessRunner.RunAsync(BuildCommand(setup, step, tools), _log.Add,
+                step.Cancellable ? cancel : CancellationToken.None);
+            AllowCancel(false);
+            if (code != 0)
+                return false;
+        }
+        if (!File.Exists(setup.ExePath()))
+        {
+            _log.Add($"Der Build lief durch, aber es gibt kein {setup.ExePath()}.");
+            return false;
+        }
+        _settings = _settings.With(_fork.Id, State with { LastBuiltCommit = _head });
+        SaveSettings();
+        return true;
+    }
+
+    private static ProcessStartInfo BuildCommand(ForkSetup setup, BuildStep step, IReadOnlyDictionary<string, string> tools)
+    {
+        var start = new ProcessStartInfo(tools[step.Tool]) { WorkingDirectory = setup.RuntimeDir()! };
+        foreach (var argument in step.Arguments)
+            start.ArgumentList.Add(argument);
+        // The launcher expects the programs in the checkout's own target folder.
+        start.Environment.Remove("CARGO_TARGET_DIR");
+        start.Environment["CARGO_TERM_COLOR"] = "never";
+        // rustc sits next to cargo, and build scripts call cargo or python themselves; a program started from
+        // Explorer may not have these folders on PATH.
+        var folders = tools.Values.Select(Path.GetDirectoryName);
+        start.Environment["PATH"] = string.Join(Path.PathSeparator,
+            folders.Append(Environment.GetEnvironmentVariable("PATH")));
+        return start;
+    }
+
+    /// <summary>The fork's own way if it is fixed, otherwise what the built program's help offers.</summary>
+    private async Task<WarmKind> WarmKindOf(ForkSetup setup)
+    {
+        if (setup.Fork.Warm is { } known)
+            return known;
+        try
+        {
+            var help = await Help(setup, "--help");
+            var commands = CliHelp.Commands(help);
+            var warm = commands.Contains("warm") ? await Help(setup, "warm", "--help") : "";
+            var translate = commands.Contains("translate") ? await Help(setup, "translate", "--help") : "";
+            var kind = WarmPlan.Detect(help, warm, translate);
+            _log.Add($"Warmup-Art laut Hilfe des Programms: {kind}");
+            return kind;
+        }
+        catch (Exception e) when (e is OperationCanceledException or Win32Exception or IOException)
+        {
+            _log.Add("Die Hilfe des Programms ließ sich nicht lesen: " + e.Message);
+            return WarmKind.None;
+        }
+    }
+
+    private static async Task<string> Help(ForkSetup setup, params string[] arguments)
+    {
+        var start = new ProcessStartInfo(setup.ExePath()) { WorkingDirectory = Home };
+        foreach (var argument in arguments)
+            start.ArgumentList.Add(argument);
+        var lines = new List<string>();
+        using var limit = new CancellationTokenSource(HelpLimit);
+        await ProcessRunner.RunAsync(start, line => { lock (lines) lines.Add(line); }, limit.Token);
+        lock (lines)
+            return string.Join('\n', lines);
+    }
+
+    // ---------- warmup and game ----------
+
+    private async Task Warm()
+    {
+        if (!Ready(PathCheck.Folders) || !await UpdateAndBuild(askOnFailure: true) || !Ready(PathCheck.Checkout))
+            return;
+
+        var setup = Setup;
+        var kind = CheckedWarm() ?? WarmKind.None;
+        var steps = WarmPlan.Steps(kind, setup.GameDir);
+        if (steps.Count == 0)
+        {
+            StatusText.Text = WarmPlan.About(WarmKind.None);
+            return;
+        }
+        var starts = steps.Select(arguments => Game(setup, arguments)).ToList();
+        var commit = _head;
+        // Taken now: it has to describe what this warmup runs with.
+        var fingerprint = Fingerprint();
+        // Only this way reports counts the launcher can turn into a percentage.
+        var progress = kind == WarmKind.GameFiles
+            ? new WarmProgress(State.LastWarmTotal ?? WarmProgress.EstimatedTotal)
+            : null;
+
+        _log.Open(Path.Combine(Home, "logs", "warm.log"));
+        _log.Add($"Fork: {_fork.Name}, Commit {commit}");
+        using var cancel = new CancellationTokenSource();
+        _cancel = cancel;
+        _warm = progress;
+        _warmLine = "";
+        _clock.Restart();
+        SetActivity(Activity.Warming);
+        WarmBar.IsIndeterminate = progress is null;
+        try
+        {
+            for (var i = 0; i < starts.Count; i++)
+            {
+                _warmStep = starts.Count > 1 ? $"Schritt {i + 1} von {starts.Count} ({steps[i][0]})" : steps[i][0];
+                _log.Add($"> {Path.GetFileName(setup.ExePath())} {string.Join(' ', steps[i])}");
+                var code = await ProcessRunner.RunAsync(starts[i], line =>
+                {
+                    progress?.Feed(line);
+                    if (!string.IsNullOrWhiteSpace(line))
+                        _warmLine = line;
+                    _log.Add(line);
+                }, cancel.Token);
+
+                if (code != 0 || (progress is not null && progress.ResultLine is null))
+                {
+                    _warm = null;
+                    SetActivity(Activity.Updating);
+                    WarmBar.IsIndeterminate = false;
+                    WarmBar.Value = progress?.Percent ?? 0;
+                    StatusText.Text = $"Warmup fehlgeschlagen bei {_warmStep} (Exit-Code {code}). Details in logs\\warm.log.";
+                    return;
+                }
+            }
+
+            var result = progress?.ResultLine ?? _warmLine;
+            _warm = null;
+            SetActivity(Activity.Updating);
+            WarmBar.IsIndeterminate = false;
+            WarmBar.Value = 100;
+            StatusText.Text = $"Warmup fertig nach {Clock()}: " + Shorten(Regex.Replace(result, @"\s+", " "), 220);
+            _settings = _settings.With(_fork.Id, State with
+            {
+                LastWarmCommit = commit,
+                LastWarmFingerprint = fingerprint,
+                LastWarmTotal = progress?.ResultTotal,
+            });
+            SaveSettings();
+            ShowHint();
+        }
+        catch (OperationCanceledException)
+        {
+            _warm = null;
+            SetActivity(Activity.Updating);
+            WarmBar.IsIndeterminate = false;
+            StatusText.Text = kind == WarmKind.GameFiles
+                ? "Warmup abgebrochen. Die Pipeline-Bibliothek wurde nicht gespeichert, bitte das Warmup später wiederholen."
+                : "Warmup abgebrochen, bitte später wiederholen.";
+        }
+        finally
+        {
+            _warm = null;
+            _cancel = null;
+        }
+    }
+
+    private async Task Play()
+    {
+        if (!Ready(PathCheck.Folders) || !await UpdateAndBuild(askOnFailure: true) || !Ready(PathCheck.Checkout))
+            return;
+        if (!await CheckPrograms())
+        {
+            StatusText.Text = "Start abgebrochen.";
+            return;
+        }
+
+        var setup = Setup;
+        var start = Game(setup, ["run", setup.GameExe(), "--execute"]);
+        SaveSettings();
+        _log.Open(Path.Combine(Home, "logs", "game.log"));
+        _log.Add($"Fork: {_fork.Name}, Commit {_head}");
+        _clock.Restart();
+        SetActivity(Activity.Playing);
+        var code = await ProcessRunner.RunAsync(start, _log.Add, CancellationToken.None);
+        SetActivity(Activity.Updating);
+        StatusText.Text = code == 0
+            ? $"Spiel beendet nach {Clock()}."
+            : $"Das Spiel endete mit Exit-Code {code} nach {Clock()}. Details in logs\\game.log.";
+    }
+
+    // ---------- programs to close before the game ----------
+
+    /// <summary>Shows what is worth closing and closes what was chosen. A failing check never blocks the start.</summary>
+    /// <returns>False when the user does not want to start.</returns>
+    private async Task<bool> CheckPrograms()
+    {
+        try
+        {
+            StatusText.Text = "Prüfe laufende Programme …";
+            WarmBar.IsIndeterminate = true;
+            var scan = await ProcessScanner.ScanAsync(TimeSpan.FromSeconds(3), CancellationToken.None);
+            if (scan.Warning is { } warning)
+                _log.Add(warning);
+            var found = ProgramCheck.Select(scan.Processes, scan.OwnSession, scan.FreeRamBytes,
+                Environment.GetFolderPath(Environment.SpecialFolder.Windows));
+            _log.Add($"Programmprüfung: {found.Count} Programme gemeldet.");
+            if (found.Count == 0)
+                return true;
+
+            var dialog = new ProgramDialog(found) { Owner = this };
+            dialog.ShowDialog();
+            if (dialog.Choice != ProgramChoice.CloseSelected)
+                return dialog.Choice == ProgramChoice.StartAnyway;
+
+            StatusText.Text = "Schließe die ausgewählten Programme …";
+            _log.Add("Schließen: " + Names(dialog.Selected));
+            return await ProgramCloser.CloseForStartAsync(dialog.Selected, TimeSpan.FromSeconds(8), AskForce,
+                stuck =>
+                {
+                    _log.Add("Ließ sich nicht beenden: " + Names(stuck));
+                    Warn("Diese Programme ließen sich nicht beenden, das Spiel startet trotzdem:\n\n" + Bullets(stuck));
+                }, CancellationToken.None);
+        }
+        catch (Exception e)
+        {
+            _log.Add("Programmprüfung fehlgeschlagen: " + e);
+            return true;
+        }
+        finally
+        {
+            WarmBar.IsIndeterminate = false;
+        }
+    }
+
+    private ForceAnswer AskForce(IReadOnlyList<ProgramCandidate> remaining)
+    {
+        var answer = MessageBox.Show(this,
+            "Diese Programme laufen noch:\n\n" + Bullets(remaining) +
+            "\n\nFragt eines gerade, ob gespeichert werden soll, antworte bitte zuerst dort." +
+            "\n\nJa: hart beenden und starten. Nicht Gespeichertes geht dabei verloren." +
+            "\nNein: weiterlaufen lassen und starten." +
+            "\nAbbrechen: nicht starten.",
+            "Hart beenden?", MessageBoxButton.YesNoCancel, MessageBoxImage.Warning, MessageBoxResult.No);
+        var choice = answer switch
+        {
+            MessageBoxResult.Yes => ForceAnswer.Force,
+            MessageBoxResult.No => ForceAnswer.Leave,
+            _ => ForceAnswer.Cancel,
+        };
+        _log.Add($"Läuft noch: {Names(remaining)}. Antwort: {choice}");
+        return choice;
+    }
+
+    private static string Names(IEnumerable<ProgramCandidate> programs) => string.Join(", ", programs.Select(p => p.Name));
+
+    private static string Bullets(IEnumerable<ProgramCandidate> programs) =>
+        string.Join("\n", programs.Select(p => "•  " + p.Name));
+
+    private bool Ready(Func<ForkSetup, string?> check)
+    {
+        if (check(Setup) is not { } problem)
+            return true;
+        Warn(problem);
+        return false;
+    }
+
+    /// <summary>Warmup and game get the same environment: the cache key depends on it.</summary>
+    private static ProcessStartInfo Game(ForkSetup setup, IEnumerable<string> arguments)
+    {
+        // Read after the update: a tuning script comes from the checkout.
+        var settings = setup.ReadSettings();
+        Directory.CreateDirectory(setup.CacheDir);
+        if (setup.DataDir is { } data)
+            Directory.CreateDirectory(data);
+        var exe = setup.ExePath();
+        var start = new ProcessStartInfo(exe)
+        {
+            WorkingDirectory = setup.Fork.RunsFromExeFolder ? Path.GetDirectoryName(exe)! : Home,
+        };
+        foreach (var argument in arguments)
+            start.ArgumentList.Add(argument);
+        LaunchEnvironment.Apply(start.Environment, settings, setup.GameDir, setup.CacheDir, setup.DataDir);
+        return start;
+    }
+
+    // ---------- window state ----------
+
+    /// <summary>One thing at a time, and no error may take the window down.</summary>
+    private async Task Guard(Func<Task> action)
+    {
+        if (_activity != Activity.Idle || TypingUrl)
+            return;
+        SetActivity(Activity.Updating);
+        try
+        {
+            await action();
+        }
+        catch (Exception e)
+        {
+            _log.Add(e.ToString());
+            StatusText.Text = "Fehler: " + e.Message;
+            Warn(e.Message);
+        }
+        finally
+        {
+            WarmBar.IsIndeterminate = false;
+            SetActivity(Activity.Idle);
+            if (_closeWhenIdle)
+                Close();
+        }
+    }
+
+    private void SetActivity(Activity activity)
+    {
+        _activity = activity;
+        var idle = activity == Activity.Idle;
+        foreach (var control in new Control[] { ForkBox, UrlBox, AddUrlButton, RemoveForkButton, GameBox, GameBrowse })
+            control.IsEnabled = idle;
+        var forkChosen = idle && !TypingUrl;
+        foreach (var control in new Control[] { CheckButton, PlayButton, CacheBox, RepoBox, CacheBrowse, RepoBrowse })
+            control.IsEnabled = forkChosen;
+        WarmButton.IsEnabled = forkChosen && CheckedWarm() != WarmKind.None;
+        CancelButton.IsEnabled = activity == Activity.Warming;
+        PlayButton.Content = activity == Activity.Playing ? "SPIEL LÄUFT …" : "SPIEL STARTEN";
+    }
+
+    /// <summary>For the parts of a check that may be stopped: cloning and the cargo build.</summary>
+    private void AllowCancel(bool allowed) => CancelButton.IsEnabled = allowed;
+
+    protected override void OnSourceInitialized(EventArgs e)
+    {
+        base.OnSourceInitialized(e);
+        TitleBar.Evening(this);
+    }
+
+    private void Refresh()
+    {
+        if (_log.TryTakeTail(out var text))
+        {
+            LogBox.Text = text;
+            LogBox.ScrollToEnd();
+        }
+        if (_activity == Activity.Warming && _cancel is { IsCancellationRequested: false })
+        {
+            if (_warm is { } warm)
+            {
+                WarmBar.Value = warm.Percent;
+                var total = State.LastWarmTotal is null ? $"ca. {warm.Total:N0} (geschätzt)" : $"{warm.Total:N0}";
+                StatusText.Text = $"{warm.Count:N0} von {total} Shadern · {warm.Percent:0} % · {Clock()}";
+            }
+            else
+            {
+                StatusText.Text = $"Warmup {_warmStep} · {Clock()}\n{Shorten(_warmLine, 110)}";
+            }
+        }
+        else if (_activity == Activity.Playing)
+        {
+            StatusText.Text = $"Das Spiel läuft seit {Clock()}. Zum Beenden das Spielfenster schließen.";
+        }
+    }
+
+    private static string Shorten(string text, int length) => text.Length <= length ? text : text[..length] + " …";
+
+    private string Clock() => _clock.Elapsed.ToString(_clock.Elapsed.TotalHours >= 1 ? @"h\:mm\:ss" : @"m\:ss");
+
+    /// <returns>The warmup of the checked build, or null while it is unknown.</returns>
+    private WarmKind? CheckedWarm() =>
+        _checked is { } last && last.ForkId == _fork.Id && last.RepoDir == Setup.RepoDir ? last.Warm : null;
+
+    private void ShowHint()
+    {
+        if (TypingUrl || CheckedWarm() is not { } kind)
+        {
+            HintText.Text = "";
+            return;
+        }
+        var hint = kind == WarmKind.None ? "" : WarmState.Hint(State, Fingerprint());
+        HintText.Text = string.Join(" ", new[] { hint, WarmPlan.About(kind) }.Where(part => part.Length > 0));
+    }
+
+    /// <returns>Null while it cannot be told: before the first check of this fork and checkout.</returns>
+    private string? Fingerprint()
+    {
+        var setup = Setup;
+        if (CheckedWarm() is null || _checked?.SourceId is not { } sourceId)
+            return null;
+        try
+        {
+            return WarmState.Fingerprint(sourceId, setup.ReadSettings(), setup.GameDir, setup.CacheDir, setup.DataDir);
+        }
+        // The hint must not get in the way; warmup and game report an unreadable script themselves.
+        catch (Exception e) when (e is IOException or UnauthorizedAccessException or InvalidDataException or ArgumentException)
+        {
+            return null;
+        }
+    }
+
+    private void SaveSettings()
+    {
+        try
+        {
+            _settings.Save(SettingsFile);
+        }
+        catch (Exception e) when (e is IOException or UnauthorizedAccessException)
+        {
+            _log.Add("Einstellungen nicht gespeichert: " + e.Message);
+        }
+    }
+
+    private static bool VictoryIsRunning() =>
+        Process.GetProcessesByName("victory").Length > 0 || Process.GetProcessesByName("kelvaroq-engine").Length > 0;
+
+    private void Warn(string message) =>
+        MessageBox.Show(this, message, Title, MessageBoxButton.OK, MessageBoxImage.Warning);
+
+    private void OnClosing(object? sender, CancelEventArgs e)
+    {
+        switch (_activity)
+        {
+            case Activity.Playing:
+                e.Cancel = true;
+                Warn("Das Spiel läuft noch. Bitte zuerst das Spielfenster schließen.");
+                break;
+            case Activity.Updating when !CancelButton.IsEnabled:
+                e.Cancel = true;
+                Warn("Der Launcher ist noch beschäftigt. Bitte kurz warten.");
+                break;
+            case Activity.Updating:
+            case Activity.Warming:
+                e.Cancel = true;
+                var question = _activity == Activity.Warming
+                    ? "Das Warmup läuft noch. Abbrechen und schließen?"
+                    : "Auschecken oder Build laufen noch. Abbrechen und schließen?";
+                if (MessageBox.Show(this, question, Title, MessageBoxButton.YesNo, MessageBoxImage.Question,
+                        MessageBoxResult.No) == MessageBoxResult.Yes && _cancel is { } cancel)
+                {
+                    _closeWhenIdle = true;
+                    cancel.Cancel();
+                }
+                break;
+        }
+    }
+}
