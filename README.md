@@ -28,6 +28,7 @@ Games, Take-Two or Microsoft, nor with the authors of the forks.
 | [kelvaroq](https://github.com/fablinoo/kelvaroq) | detected after the build | the tier for 10 GB |
 | [VItoriaBr](https://github.com/uiliannn/VItoriaBr) | yes (`warm`) | its preset for 8 GB |
 | [victory-fork](https://github.com/fxceless/victory-fork) | no | `VICTORY_TEXTURE_BACK=1` |
+| [VIctory (DexNom)](https://github.com/DexNom/VIctory) | yes (`warm`) | its experimental NVIDIA mode (ray tracing and FSR off), developed for AMD |
 
 Except for AnyXboxX, the launcher reads the kind of warmup from the help of the built program. There is also
 "Own Git URL …" (`https://` only, a layout with `apps\victory` in the root or below `third_party\victory`, no special

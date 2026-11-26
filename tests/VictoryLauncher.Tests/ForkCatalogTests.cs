@@ -12,14 +12,15 @@ public class ForkCatalogTests
     [InlineData("kelvaroq", "https://github.com/fablinoo/kelvaroq")]
     [InlineData("vitoriabr", "https://github.com/uiliannn/VItoriaBr")]
     [InlineData("victory-fork", "https://github.com/fxceless/victory-fork")]
+    [InlineData("dexnom", "https://github.com/DexNom/VIctory")]
     public void Has_the_chosen_forks_built_in(string id, string url) =>
         Assert.Equal(url, Assert.Single(ForkCatalog.BuiltIn, f => f.Id == id).Url);
 
     [Fact]
     public void Ids_are_unique_and_safe_as_folder_names()
     {
-        Assert.Equal(7, ForkCatalog.BuiltIn.Count);
-        Assert.Equal(7, ForkCatalog.BuiltIn.Select(f => f.Id).Distinct().Count());
+        Assert.Equal(8, ForkCatalog.BuiltIn.Count);
+        Assert.Equal(8, ForkCatalog.BuiltIn.Select(f => f.Id).Distinct().Count());
         Assert.All(ForkCatalog.BuiltIn, f => Assert.Matches("^[a-z0-9-]+$", f.Id));
         Assert.All(ForkCatalog.BuiltIn, f => Assert.Equal(f.Url, GitUrl.Parse(f.Url).Url));
     }
@@ -42,6 +43,25 @@ public class ForkCatalogTests
         Assert.False(fork.Build[1].Cancellable);
         Assert.Equal(@"target\release\native\kelvaroq-engine.exe", fork.Exe);
         Assert.Contains("subst", fork.Note);
+    }
+
+    [Fact]
+    public void Dexnom_fetches_its_format_tables_before_cargo_and_starts_the_way_its_author_does_on_nvidia()
+    {
+        var fork = ForkCatalog.Find("dexnom", []);
+
+        // the tables are not in the repository, cargo cannot build without them
+        Assert.Equal(["powershell", "cargo"], fork.Build.Select(s => s.Tool));
+        Assert.Equal(["-NoProfile", "-ExecutionPolicy", "RemoteSigned", "-File", "Initialize-FormatTables.ps1"],
+            fork.Build[0].Arguments);
+        Assert.Equal(["build", "--release", "--locked", "-p", "victory", "--features", "diagnostics", "--bins"],
+            fork.Build[1].Arguments);
+        // `--no-rt` as a variable, the two variables from the README, and the one its own starter sets
+        Assert.Equal(
+            ["VICTORY_AMBIENT_FALLBACK=1", "VICTORY_DEBUG_HUD=1", "VICTORY_FSR_4K=0", "VICTORY_RAY_TRACING=0"],
+            fork.Settings.Select(pair => $"{pair.Key}={pair.Value}").Order(StringComparer.Ordinal));
+        Assert.Contains("untested", fork.Note);
+        Assert.Contains("Marvisak/VIctory", fork.Note);
     }
 
     [Fact]
@@ -92,7 +112,7 @@ public class ForkCatalogTests
     {
         var all = ForkCatalog.All(["https://github.com/me/mine"]);
 
-        Assert.Equal(8, all.Count);
+        Assert.Equal(9, all.Count);
         Assert.Equal("anyxboxx", all[0].Id);
         Assert.True(all[^1].IsCustom);
     }

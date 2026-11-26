@@ -133,6 +133,23 @@ public static partial class ForkCatalog
             Settings = Table("TEXTURE_BACK=1"),
             Note = "According to the author, measured on an RTX 4070 with 12 GB.",
         },
+        new()
+        {
+            Id = "dexnom", Name = "VIctory (DexNom)", Url = "https://github.com/DexNom/VIctory",
+            Build =
+            [
+                // the fork's own script; RemoteSigned runs a file from a checkout also where scripts are off
+                new("powershell",
+                    ["-NoProfile", "-ExecutionPolicy", "RemoteSigned", "-File", "Initialize-FormatTables.ps1"]),
+                new("cargo",
+                    ["build", "--release", "--locked", "-p", "victory", "--features", "diagnostics", "--bins"]),
+            ],
+            // its README's experimental NVIDIA launch (`--no-rt` as a variable), and DEBUG_HUD like its own starter
+            Settings = Table("RAY_TRACING=0", "FSR_4K=0", "AMBIENT_FALLBACK=1", "DEBUG_HUD=1"),
+            Note = "Its experimental NVIDIA mode, ray tracing and FSR off. Developed for an AMD Radeon with 24 GB, " +
+                   "NVIDIA gameplay is untested by the author. The build downloads format tables from " +
+                   "Marvisak/VIctory and checks their SHA-256.",
+        },
     ];
 
     /// <param name="url">An address accepted by <see cref="GitUrl.Parse"/>.</param>
