@@ -10,6 +10,8 @@
     <Nullable>enable</Nullable>
     <ImplicitUsings>enable</ImplicitUsings>
     <UseWPF>true</UseWPF>
+    <!-- 0.0.0 marks a build nobody released; it never updates itself. The release action sets the real number. -->
+    <Version>0.0.0</Version>
   </PropertyGroup>
 
 </Project>

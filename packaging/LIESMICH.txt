@@ -10,6 +10,13 @@ Start
   - nur für kelvaroq: Python 3.11 oder neuer und das Windows SDK
   - eigene, rechtmäßig erworbene Spieldateien (sind nicht enthalten)
 
+Updates
+  - Beim Öffnen fragt der Launcher GitHub nach einer neueren Version. Gibt es eine, erscheint der
+    Knopf AKTUALISIEREN. Erst nach dem Klick wird geladen, geprüft und neu gestartet.
+    settings.json und logs bleiben.
+  - Die EXE ist nicht signiert. Die Prüfsumme erkennt beschädigte Downloads, schützt aber nicht,
+    wenn jemand das GitHub-Konto übernimmt.
+
 Gut zu wissen
   - Der Launcher baut und startet fremden Code. Vor dem ersten Auschecken eines Forks fragt er
     nach (AnyXboxX ist vorab bestätigt). Danach werden neue Commits ohne weitere Rückfrage

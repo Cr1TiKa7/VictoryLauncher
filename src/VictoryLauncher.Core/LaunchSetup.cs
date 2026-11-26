@@ -1,3 +1,4 @@
+using System.Diagnostics;
 using System.Text.Json;
 using System.Text.Json.Serialization;
 
@@ -43,6 +44,9 @@ public sealed record LauncherSettings
     [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)] public string? LastWarmFingerprint { get; init; }
     [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)] public int? LastWarmTotal { get; init; }
 
+    /// <summary>Set when there is a settings file that could not be read. Then these are the defaults.</summary>
+    [JsonIgnore] public string? LoadProblem { get; init; }
+
     public ForkProfile Selected() => ForkCatalog.Find(SelectedFork, CustomUrls);
 
     public ForkState State(string id) => Forks.GetValueOrDefault(id) ?? new();
@@ -71,20 +75,61 @@ public sealed record LauncherSettings
         return new(fork, repo, cache, data, GameDir);
     }
 
+    // Somebody else may hold the file for a moment, a virus scanner for example.
+    private static readonly TimeSpan Patience = TimeSpan.FromSeconds(2);
+    private static readonly TimeSpan Pause = TimeSpan.FromMilliseconds(100);
+
     public static LauncherSettings Load(string path)
     {
-        try
+        var waited = Stopwatch.StartNew();
+        while (true)
         {
-            return (JsonSerializer.Deserialize<LauncherSettings>(File.ReadAllText(path)) ?? new()).Cleaned();
-        }
-        catch (Exception e) when (e is IOException or JsonException or UnauthorizedAccessException)
-        {
-            return new();
+            try
+            {
+                var text = File.ReadAllText(path);
+                return string.IsNullOrWhiteSpace(text)
+                    ? new()
+                    : (JsonSerializer.Deserialize<LauncherSettings>(text) ?? new()).Cleaned();
+            }
+            catch (Exception e) when (e is FileNotFoundException or DirectoryNotFoundException)
+            {
+                return new();
+            }
+            catch (Exception e) when (e is IOException or UnauthorizedAccessException && waited.Elapsed < Patience)
+            {
+                Thread.Sleep(Pause);
+            }
+            catch (Exception e) when (e is IOException or JsonException or UnauthorizedAccessException)
+            {
+                return new() { LoadProblem = e.Message };
+            }
         }
     }
 
-    public void Save(string path) =>
-        File.WriteAllText(path, JsonSerializer.Serialize(this, new JsonSerializerOptions { WriteIndented = true }));
+    /// <summary>
+    /// Puts a complete new file in place of the old one. A file that could not be read is left alone: it holds more
+    /// than the defaults that were taken instead.
+    /// </summary>
+    public void Save(string path)
+    {
+        if (LoadProblem is not null)
+            return;
+        var fresh = path + ".tmp";
+        File.WriteAllText(fresh, JsonSerializer.Serialize(this, new JsonSerializerOptions { WriteIndented = true }));
+        var waited = Stopwatch.StartNew();
+        while (true)
+        {
+            try
+            {
+                File.Move(fresh, path, overwrite: true);
+                return;
+            }
+            catch (Exception e) when (e is IOException or UnauthorizedAccessException && waited.Elapsed < Patience)
+            {
+                Thread.Sleep(Pause);
+            }
+        }
+    }
 
     /// <summary>The file can be edited by hand: repair what is missing and check every own address again.</summary>
     private LauncherSettings Cleaned()

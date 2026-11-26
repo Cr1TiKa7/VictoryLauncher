@@ -15,6 +15,16 @@
         <local:SunsetHeader DockPanel.Dock="Top" />
 
         <DockPanel Margin="24,6,24,20">
+            <Border DockPanel.Dock="Top" x:Name="UpdateBar" Visibility="Collapsed" CornerRadius="7" Background="#1EFFC857"
+                    BorderBrush="#66FFC857" BorderThickness="1" Padding="12,5" Margin="0,0,0,12">
+                <DockPanel>
+                    <Button DockPanel.Dock="Right" x:Name="UpdateButton" Content="AKTUALISIEREN" Width="130" Padding="4,4"
+                            Margin="12,0,0,0" Click="Update_Click" />
+                    <TextBlock x:Name="UpdateText" Foreground="{StaticResource Amber}" VerticalAlignment="Center"
+                               TextWrapping="Wrap" />
+                </DockPanel>
+            </Border>
+
             <Grid DockPanel.Dock="Top">
                 <Grid.ColumnDefinitions>
                     <ColumnDefinition Width="Auto" />

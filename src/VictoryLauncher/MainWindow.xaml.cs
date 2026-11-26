@@ -46,6 +46,7 @@ public partial class MainWindow : Window
     public MainWindow()
     {
         InitializeComponent();
+        Title = WindowName;
         _fork = _settings.Selected();
         ListForks();
         ShowFork();
@@ -57,11 +58,21 @@ public partial class MainWindow : Window
         // On opening only a fork that is already there and agreed to is touched.
         Loaded += async (_, _) =>
         {
-            if (_settings.IsTrusted(_fork) && ForkCheckout.Exists(Setup.RepoDir))
+            var known = _settings.LoadProblem is null;
+            if (!known)
+                WarnAboutSettings();
+            _ = CheckForUpdate();
+            // With the standard values instead of the user's, the folders may be the wrong ones.
+            if (known && _settings.IsTrusted(_fork) && ForkCheckout.Exists(Setup.RepoDir))
                 await Guard(async () => { await UpdateAndBuild(); });
         };
         Closing += OnClosing;
-        Closed += (_, _) => { SaveSettings(); _log.Dispose(); };
+        Closed += (_, _) =>
+        {
+            SaveSettings();
+            _log.Dispose();
+            StartSuccessor();
+        };
         SetActivity(Activity.Idle);
     }
 
@@ -686,7 +697,7 @@ public partial class MainWindow : Window
     {
         _activity = activity;
         var idle = activity == Activity.Idle;
-        foreach (var control in new Control[] { ForkBox, UrlBox, AddUrlButton, RemoveForkButton, GameBox, GameBrowse })
+        foreach (var control in new Control[] { ForkBox, UrlBox, AddUrlButton, RemoveForkButton, GameBox, GameBrowse, UpdateButton })
             control.IsEnabled = idle;
         var forkChosen = idle && !TypingUrl;
         foreach (var control in new Control[] { CheckButton, PlayButton, CacheBox, RepoBox, CacheBrowse, RepoBrowse })
@@ -729,6 +740,11 @@ public partial class MainWindow : Window
         {
             StatusText.Text = $"Das Spiel läuft seit {Clock()}. Zum Beenden das Spielfenster schließen.";
         }
+        else if (Volatile.Read(ref _downloadPercent) is var percent and >= 0 && _cancel is { IsCancellationRequested: false })
+        {
+            WarmBar.Value = percent;
+            StatusText.Text = $"Lade Version {_update?.Version} … {percent} %";
+        }
     }
 
     private static string Shorten(string text, int length) => text.Length <= length ? text : text[..length] + " …";
@@ -767,6 +783,15 @@ public partial class MainWindow : Window
         }
     }
 
+    private void WarnAboutSettings()
+    {
+        _log.Add($"{SettingsFile} ließ sich nicht lesen: {_settings.LoadProblem}");
+        Warn("settings.json ließ sich nicht lesen. Es gelten die Standardwerte. Damit nichts verloren geht, wird die " +
+             "Datei nicht überschrieben: Änderungen gelten nur bis zum Schließen.\n\n" +
+             "Repariere oder lösche die Datei und starte den Launcher neu, dann speichert er wieder.\n\n" +
+             $"{SettingsFile}\n{_settings.LoadProblem}");
+    }
+
     private void SaveSettings()
     {
         try
@@ -800,8 +825,8 @@ public partial class MainWindow : Window
             case Activity.Updating:
             case Activity.Warming:
                 e.Cancel = true;
-                var question = _activity == Activity.Warming
-                    ? "Das Warmup läuft noch. Abbrechen und schließen?"
+                var question = _activity == Activity.Warming ? "Das Warmup läuft noch. Abbrechen und schließen?"
+                    : Volatile.Read(ref _downloadPercent) >= 0 ? "Das Update wird noch geladen. Abbrechen und schließen?"
                     : "Auschecken oder Build laufen noch. Abbrechen und schließen?";
                 if (MessageBox.Show(this, question, Title, MessageBoxButton.YesNo, MessageBoxImage.Question,
                         MessageBoxResult.No) == MessageBoxResult.Yes && _cancel is { } cancel)

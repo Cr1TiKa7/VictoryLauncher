@@ -1,3 +1,4 @@
+using System.Runtime.InteropServices;
 using VictoryLauncher.Core;
 
 namespace VictoryLauncher.Tests;
@@ -65,7 +66,7 @@ public class LaunchSetupTests : IDisposable
     }
 
     [Fact]
-    public void Settings_survive_a_save_and_a_broken_file_gives_defaults()
+    public void Settings_survive_a_save_and_a_broken_file_gives_defaults_to_work_with()
     {
         var path = Path.Combine(_root, "settings.json");
         var saved = new LauncherSettings { GameDir = @"D:\game", SelectedFork = "kelvaroq" }
@@ -83,6 +84,116 @@ public class LaunchSetupTests : IDisposable
         File.WriteAllText(path, "{ not json");
         Assert.Equal("anyxboxx", LauncherSettings.Load(path).SelectedFork);
         Assert.Empty(LauncherSettings.Load(path).CustomUrls);
+    }
+
+    private string SavedSettings(string fork)
+    {
+        var path = Path.Combine(_root, "settings.json");
+        new LauncherSettings { SelectedFork = fork }.AddCustom(Mine).Save(path);
+        return path;
+    }
+
+    // Right after an update the new version reads the file its predecessor has only just written.
+    [Fact]
+    public async Task A_file_that_is_held_for_a_moment_is_waited_for()
+    {
+        var path = SavedSettings("kelvaroq");
+        var held = new FileStream(path, FileMode.Open, FileAccess.ReadWrite, FileShare.None);
+        var release = new Thread(() =>
+        {
+            Thread.Sleep(400);
+            held.Dispose();
+        });
+        release.Start();
+
+        var loaded = await Task.Run(() => LauncherSettings.Load(path));
+        release.Join();
+
+        Assert.Null(loaded.LoadProblem);
+        Assert.Equal("kelvaroq", loaded.SelectedFork);
+        Assert.Equal([Mine], loaded.CustomUrls);
+    }
+
+    [Fact]
+    public async Task Saving_waits_for_a_file_that_is_held_for_a_moment()
+    {
+        var path = SavedSettings("kelvaroq");
+        var loaded = LauncherSettings.Load(path);
+        var held = new FileStream(path, FileMode.Open, FileAccess.Read, FileShare.Read);
+        var release = new Thread(() =>
+        {
+            Thread.Sleep(400);
+            held.Dispose();
+        });
+        release.Start();
+
+        await Task.Run(() => (loaded with { SelectedFork = "vice-tay" }).Save(path));
+        release.Join();
+
+        Assert.Equal("vice-tay", LauncherSettings.Load(path).SelectedFork);
+    }
+
+    [Fact]
+    public void A_file_that_stays_unreadable_is_never_overwritten()
+    {
+        var path = SavedSettings("kelvaroq");
+        var before = File.ReadAllBytes(path);
+        LauncherSettings loaded;
+        using (new FileStream(path, FileMode.Open, FileAccess.ReadWrite, FileShare.None))
+            loaded = LauncherSettings.Load(path);
+
+        (loaded with { SelectedFork = "vice-tay" }).With("vice-tay", new ForkState { TrustedUrl = "u" }).Save(path);
+
+        Assert.NotNull(loaded.LoadProblem);
+        Assert.Equal(before, File.ReadAllBytes(path));
+    }
+
+    [Fact]
+    public void A_damaged_file_stays_as_it_is()
+    {
+        var path = Path.Combine(_root, "settings.json");
+        File.WriteAllText(path, """{ "SelectedFork": "kelvaroq", """);
+
+        var loaded = LauncherSettings.Load(path);
+        loaded.Save(path);
+
+        Assert.NotNull(loaded.LoadProblem);
+        Assert.Equal("""{ "SelectedFork": "kelvaroq", """, File.ReadAllText(path));
+    }
+
+    [Theory]
+    [InlineData(null)] // not there yet
+    [InlineData("")] // nothing in it that could get lost
+    [InlineData(" \r\n")]
+    public void Without_anything_to_lose_the_defaults_are_saved(string? content)
+    {
+        var path = Path.Combine(_root, "settings.json");
+        if (content is not null)
+            File.WriteAllText(path, content);
+
+        var loaded = LauncherSettings.Load(path);
+        (loaded with { SelectedFork = "kelvaroq" }).Save(path);
+
+        Assert.Null(loaded.LoadProblem);
+        Assert.Equal("kelvaroq", LauncherSettings.Load(path).SelectedFork);
+    }
+
+    [DllImport("kernel32.dll", CharSet = CharSet.Unicode, SetLastError = true)]
+    private static extern bool CreateHardLink(string newName, string existingFile, IntPtr security);
+
+    [Fact]
+    public void Saving_replaces_the_file_in_one_step()
+    {
+        var path = SavedSettings("kelvaroq");
+        // a second name for the old content: writing into the file would change it too, replacing the file does not
+        var before = Path.Combine(_root, "before.json");
+        Assert.True(CreateHardLink(before, path, IntPtr.Zero));
+
+        new LauncherSettings { SelectedFork = "vice-tay" }.Save(path);
+
+        Assert.Equal("vice-tay", LauncherSettings.Load(path).SelectedFork);
+        Assert.Equal("kelvaroq", LauncherSettings.Load(before).SelectedFork);
+        Assert.Equal(["before.json", "settings.json"], Directory.GetFiles(_root).Select(Path.GetFileName).Order());
     }
 
     [Fact]

@@ -5,7 +5,13 @@ on:
     branches: [main]
     tags: ['v*']
   pull_request:
+  # The "Run workflow" button on main builds a new version and creates its tag and release.
   workflow_dispatch:
+    inputs:
+      version:
+        description: Version of the new release, for example 1.1.0
+        required: true
+        type: string
 
 permissions:
   contents: read
@@ -13,8 +19,25 @@ permissions:
 jobs:
   build:
     runs-on: windows-latest
+    outputs:
+      tag: ${{ steps.version.outputs.tag }}
     steps:
       - uses: actions/checkout@v7
+
+      # Right at the start, so that a version that cannot be released stops the run before anything is built.
+      # The typed text reaches the script as a variable and is never part of the code that runs.
+      - name: Version
+        id: version
+        shell: pwsh
+        env:
+          REQUESTED: ${{ inputs.version }}
+        run: |
+          $tags = git ls-remote --tags --refs origin
+          if ($LASTEXITCODE -ne 0) { throw 'The tags of the repository could not be read.' }
+          $names = @($tags | ForEach-Object { $_ -replace '^.*refs/tags/', '' }) -join ' '
+          $lines = ./packaging/Get-ReleaseVersion.ps1 -EventName $env:GITHUB_EVENT_NAME -Ref $env:GITHUB_REF -Requested "$env:REQUESTED" -ExistingTags $names
+          if ($LASTEXITCODE -ne 0) { exit 1 }
+          $lines | Tee-Object -FilePath $env:GITHUB_OUTPUT -Append
 
       - uses: actions/setup-dotnet@v6
         with:
@@ -24,18 +47,22 @@ jobs:
       - name: Test
         run: dotnet test tests/VictoryLauncher.Tests -c Release --filter "Category!=Desktop"
 
+      # A build that is not released gets 0.0.0. Such a launcher never replaces itself.
       - name: Publish
         run: >
           dotnet publish src/VictoryLauncher -c Release -r win-x64 --self-contained true
           -p:PublishSingleFile=true -p:IncludeNativeLibrariesForSelfExtract=true
-          -p:DebugType=none -p:DebugSymbols=false -o publish
+          -p:DebugType=none -p:DebugSymbols=false -p:Version=${{ steps.version.outputs.version }} -o publish
 
+      # The launcher looks for exactly this name in a release: VictoryLauncher-vX.Y.Z-win-x64.zip
       - name: Pack
         shell: pwsh
+        env:
+          TAG: ${{ steps.version.outputs.tag }}
         run: |
           Copy-Item packaging/LIESMICH.txt publish
-          $version = if ($env:GITHUB_REF_TYPE -eq 'tag') { $env:GITHUB_REF_NAME } else { $env:GITHUB_SHA.Substring(0, 7) }
-          Compress-Archive -Path publish/* -DestinationPath "VictoryLauncher-$version-win-x64.zip"
+          $name = if ($env:TAG) { $env:TAG } else { $env:GITHUB_SHA.Substring(0, 7) }
+          Compress-Archive -Path publish/* -DestinationPath "VictoryLauncher-$name-win-x64.zip"
 
       - uses: actions/upload-artifact@v7
         with:
@@ -45,7 +72,7 @@ jobs:
 
   # A job of its own, so that only this step may write to the repository.
   release:
-    if: github.ref_type == 'tag'
+    if: needs.build.outputs.tag != ''
     needs: build
     runs-on: ubuntu-latest
     permissions:
@@ -55,9 +82,12 @@ jobs:
         with:
           name: VictoryLauncher-win-x64
 
+      # A pushed tag has to exist. "Run workflow" creates the tag on the commit that was built.
       - name: Create the release
         env:
           GH_TOKEN: ${{ github.token }}
-        run: >
-          gh release create "$GITHUB_REF_NAME" VictoryLauncher-*-win-x64.zip --repo "$GITHUB_REPOSITORY"
-          --title "VictoryLauncher $GITHUB_REF_NAME" --generate-notes --verify-tag
+          TAG: ${{ needs.build.outputs.tag }}
+        run: |
+          if [ "$GITHUB_REF_TYPE" = tag ]; then where=(--verify-tag); else where=(--target "$GITHUB_SHA"); fi
+          gh release create "$TAG" VictoryLauncher-*-win-x64.zip --repo "$GITHUB_REPOSITORY" \
+            --title "VictoryLauncher $TAG" --generate-notes "${where[@]}"

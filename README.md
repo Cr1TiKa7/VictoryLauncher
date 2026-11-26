@@ -12,7 +12,8 @@ Rockstar Games, Take-Two oder Microsoft noch zu den Autoren der Forks.
 - git
 - Rust (rustup) samt den C++ Build Tools von Visual Studio
 - nur für kelvaroq: Python 3.11 oder neuer und das Windows SDK
-- zum Bauen aus dem Quellcode: das .NET 10 SDK (die fertige ZIP aus den Releases braucht kein .NET)
+- zum Bauen aus dem Quellcode: das .NET 10 SDK, für die Tests außerdem PowerShell 7 (die fertige ZIP aus den
+  Releases braucht beides nicht)
 
 ## Eingebaute Forks
 
@@ -44,6 +45,22 @@ Bis auf AnyXboxX sind die Einstellungen eine Momentaufnahme vom 26.11.2026, ausg
   angehakt. Angehakte werden normal geschlossen; was weiterläuft, wird nur nach einer zweiten Rückfrage hart beendet.
 - **Treiber-Cache:** Den Shader-Cache des Grafiktreibers verwaltet er nicht.
 
+## Updates des Launchers
+
+Nur die EXE aus einem Release aktualisiert sich. Ein selbst gebauter Launcher heißt im Fenstertitel `(Eigenbau)`
+und sucht gar nicht erst.
+
+- Beim Öffnen fragt der Launcher im Hintergrund GitHub nach dem neuesten Release dieses Repositorys (ohne
+  Anmeldung). Ist es höher als die eigene Version, erscheint eine Leiste mit dem Knopf **Aktualisieren**. Offline
+  oder bei Fehlern steht höchstens eine Zeile im Protokoll.
+- Erst ein Klick lädt die ZIP, prüft Größe und SHA-256, tauscht die EXE aus und startet den Launcher neu.
+  `settings.json` und `logs\` bleiben. Während geprüft, gebaut, vorgewärmt oder gespielt wird, ist der Knopf gesperrt.
+- Der Ordner der EXE muss beschreibbar sein.
+- Die EXE ist nicht signiert. Die Prüfsumme kommt aus demselben GitHub-Konto wie die ZIP: Sie erkennt beschädigte
+  Downloads, schützt aber nicht, wenn jemand das Konto übernimmt.
+
+Wer bisher selbst gebaut hat, entpackt einmal die ZIP eines Release und kopiert seine `settings.json` daneben.
+
 ## Ordner
 
 Voreingestellt:
@@ -55,7 +72,8 @@ Voreingestellt:
 | AnyXboxX | Checkout `G:\AnyXboxX`, Cache `G:\victory-data\cache-anyxboxx`, Spielstände am Standardort der Runtime |
 
 Spiel-, Cache- und Checkout-Ordner lassen sich in der Oberfläche ändern, die Wurzel `G:\victory-data` als
-`DataRoot` in `settings.json`. `settings.json` und `logs\` liegen neben der EXE.
+`DataRoot` in `settings.json`. `settings.json` und `logs\` liegen neben der EXE. Lässt sich eine vorhandene
+`settings.json` nicht lesen, sagt der Launcher das, nimmt die Standardwerte und überschreibt die Datei nicht.
 
 ## Bauen
 
@@ -73,8 +91,12 @@ Grafikkarte. Sie tragen die Kategorie `Desktop` und laufen auf dem Build-Server 
 
 ## Release
 
-Die GitHub Action [release.yml](.github/workflows/release.yml) testet und baut bei jedem Push auf `main` eine
-eigenständige ZIP und hängt sie als Artefakt an den Lauf. Ein Tag `v*` erzeugt daraus ein Release:
+Eine neue Version baust du auf GitHub: **Actions → Release → Run workflow**, Branch `main`, als `version` zum
+Beispiel `1.0.0`. Die Action prüft die Nummer, testet, baut die eigenständige ZIP und legt den Tag `v1.0.0` samt
+Release an. Die Nummer muss aus drei Zahlen bestehen und höher sein als alle bisherigen. Ältere Launcher bieten sie
+danach als Update an.
+
+Ein selbst gepushter Tag geht weiterhin:
 
 ```powershell
 git tag v1.0.0
@@ -83,3 +105,7 @@ git tag v1.0.0
 ```powershell
 git push origin v1.0.0
 ```
+
+Jeder Push auf `main` und jeder Pull Request testet und baut ebenfalls eine ZIP (Version `0.0.0`) und hängt sie als
+Artefakt an den Lauf, ohne ein Release anzulegen. Die Regeln für die Versionsnummer stehen in
+[Get-ReleaseVersion.ps1](packaging/Get-ReleaseVersion.ps1). Ihre Tests brauchen PowerShell 7.
