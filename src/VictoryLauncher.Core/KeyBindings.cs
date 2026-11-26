@@ -7,7 +7,7 @@ public enum KeyScheme
 {
     /// <summary>By their virtual key: the key that carries the letter.</summary>
     Standard,
-    /// <summary>By their place on a QWERTY keyboard, whatever is printed there (AnyXboxX, which has a mouse too).</summary>
+    /// <summary>By their place on a QWERTY keyboard, whatever is printed there (AnyXboxX).</summary>
     ByPosition,
 }
 
@@ -26,22 +26,21 @@ public static class KeyBindings
         var byPosition = scheme == KeyScheme.ByPosition;
         string Letters(string qwerty) =>
             string.Join(' ', qwerty.Select(letter => byPosition ? keyAt(letter) : letter.ToString()));
-        string Also(string key, string more) => byPosition ? $"{key} or {more}" : key;
 
         return
         [
             new("Left stick", Letters("WASD")),
-            new("Right stick", Also(Letters("IJKL"), "mouse")),
+            new("Right stick", Letters("IJKL")),
             new("A", "Enter"),
             new("B", "Backspace"),
             new("X", Letters("X")),
             new("Y", Letters("Y")),
             new("LB", Letters("Q")),
             new("RB", Letters("E")),
-            new("LT", Also(Letters("Z"), "right mouse button")),
-            new("RT", Also(Letters("C"), "left mouse button")),
-            new("Left stick click (L3)", Also(Letters("F"), "Shift")),
-            new("Right stick click (R3)", Also(Letters("H"), "Ctrl")),
+            new("LT", Letters("Z")),
+            new("RT", Letters("C")),
+            new("Left stick click (L3)", Letters("F")),
+            new("Right stick click (R3)", Letters("H")),
             new("D-pad", "Arrow keys"),
             new("Menu (Start)", "Esc"),
             new("View (Back)", "Tab"),
@@ -58,8 +57,6 @@ public static class KeyBindings
         };
         if (fork.Keys == KeyScheme.ByPosition)
         {
-            notes.Add("Mouse: click into the picture to use it. F9 gives it back or takes it again, and leaving the " +
-                      "window gives it back too.");
             notes.Add("The letters go by their place on the keyboard. They are named as your current keyboard layout " +
                       "has them.");
         }

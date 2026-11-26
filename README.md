@@ -60,8 +60,7 @@ The keys only count while the game window has the focus and no controller is con
 
 All built in forks except AnyXboxX use the same keys, by the letter on the key. AnyXboxX goes by the place of a key on
 the keyboard, so the launcher names its keys as your keyboard layout has them. On a German keyboard, for example, LT is
-the key labelled `Y` with AnyXboxX and the key labelled `Z` with the others. AnyXboxX also uses Shift, Ctrl and the
-mouse.
+the key labelled `Y` with AnyXboxX and the key labelled `Z` with the others.
 
 The tables are written into the launcher (a snapshot from 2026-11-26): a fork that changes its keys is shown wrong
 until the launcher follows. For an own Git URL the usual table is shown, not checked for that fork.

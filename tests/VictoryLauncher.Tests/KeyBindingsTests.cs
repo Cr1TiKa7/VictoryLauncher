@@ -62,9 +62,9 @@ public class KeyBindingsTests
     {
         var rows = KeyBindings.Rows(KeyScheme.ByPosition, German);
 
-        Assert.Equal("Y or right mouse button", KeysFor(rows, "LT"));
+        Assert.Equal("Y", KeysFor(rows, "LT"));
         Assert.Equal("Z", KeysFor(rows, "Y"));
-        Assert.Equal("C or left mouse button", KeysFor(rows, "RT"));
+        Assert.Equal("C", KeysFor(rows, "RT"));
     }
 
     [Fact]
@@ -77,14 +77,9 @@ public class KeyBindingsTests
     }
 
     [Fact]
-    public void Anyxboxx_has_shift_ctrl_and_the_mouse_in_addition()
+    public void By_position_the_table_has_the_inputs_of_the_standard_one_and_no_others()
     {
-        var rows = KeyBindings.Rows(KeyScheme.ByPosition, Qwerty);
-
-        Assert.Equal("F or Shift", KeysFor(rows, "Left stick click (L3)"));
-        Assert.Equal("H or Ctrl", KeysFor(rows, "Right stick click (R3)"));
-        Assert.Equal("I J K L or mouse", KeysFor(rows, "Right stick"));
-        Assert.Equal(15, rows.Count);
+        Assert.Equal(KeyBindings.Rows(KeyScheme.Standard, Qwerty), KeyBindings.Rows(KeyScheme.ByPosition, Qwerty));
     }
 
     [Fact]
@@ -120,11 +115,11 @@ public class KeyBindingsTests
     }
 
     [Fact]
-    public void Anyxboxx_explains_how_to_take_and_give_back_the_mouse()
+    public void Anyxboxx_names_no_mouse_since_its_combined_base_and_says_that_keys_go_by_place()
     {
-        Assert.Contains("click into the picture", NotesOf("anyxboxx"));
-        Assert.Contains("F9", NotesOf("anyxboxx"));
-        Assert.DoesNotContain("F9", NotesOf("dexnom"));
+        Assert.Contains("place on the keyboard", NotesOf("anyxboxx"));
+        Assert.DoesNotContain("ouse", NotesOf("anyxboxx"));
+        Assert.DoesNotContain("F9", NotesOf("anyxboxx"));
     }
 
     [Fact]
