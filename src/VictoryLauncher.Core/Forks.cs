@@ -44,6 +44,9 @@ public sealed record ForkProfile
     /// <summary>Where the fingerprint for the warmup hint looks; null: the usual folders of the layout.</summary>
     public IReadOnlyList<string>? SourcePaths { get; init; }
 
+    /// <summary>How its keyboard pad finds the letter keys.</summary>
+    public KeyScheme Keys { get; init; } = KeyScheme.Standard;
+
     /// <summary>A note shown with the fork.</summary>
     public string Note { get; init; } = "";
 
@@ -66,7 +69,7 @@ public static partial class ForkCatalog
         {
             Id = DefaultId, Name = "AnyXboxX (LooperSalty)", Url = "https://github.com/LooperSalty/AnyXboxX",
             RuntimeDir = @"third_party\victory", TuningFile = @"crates\anyxboxx\src\run\settings.rs",
-            Warm = WarmKind.GameFiles, OwnDataDir = false,
+            Warm = WarmKind.GameFiles, OwnDataDir = false, Keys = KeyScheme.ByPosition,
             // its table is sized for bigger cards
             Settings = Table("CARD_BUFFERS_MB=1024"),
             Note = "Settings from crates\\anyxboxx\\src\\run\\settings.rs (the values of \"anyxboxx run\"), " +

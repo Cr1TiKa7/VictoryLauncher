@@ -49,6 +49,19 @@ fork allows it. The launcher cannot tell whether a fork shows a picture on your 
   advance. Ticked programs are closed normally; whatever keeps running is only force closed after a second question.
 - **Driver cache:** It does not manage the shader cache of the graphics driver.
 
+## Keyboard controls
+
+**CONTROLS** next to **Start game** shows which key stands in for which input of the controller with the chosen fork.
+The keys only count while the game window has the focus and no controller is connected.
+
+All built in forks except AnyXboxX use the same keys, by the letter on the key. AnyXboxX goes by the place of a key on
+the keyboard, so the launcher names its keys as your keyboard layout has them. On a German keyboard, for example, LT is
+the key labelled `Y` with AnyXboxX and the key labelled `Z` with the others. AnyXboxX also uses Shift, Ctrl and the
+mouse.
+
+The tables are written into the launcher (a snapshot from 2026-11-26): a fork that changes its keys is shown wrong
+until the launcher follows. For an own Git URL the usual table is shown, not checked for that fork.
+
 ## Updates of the launcher
 
 Only the EXE from a release updates itself. A launcher you built yourself shows `(local build)` in the window title and

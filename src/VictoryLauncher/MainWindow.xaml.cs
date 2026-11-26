@@ -234,6 +234,13 @@ public partial class MainWindow : Window
 
     private async void Play_Click(object sender, RoutedEventArgs e) => await Guard(Play);
 
+    // Not behind Guard: the keys are wanted while a warmup or the game runs, too.
+    private void Controls_Click(object sender, RoutedEventArgs e)
+    {
+        if (!TypingUrl)
+            new ControlsDialog(_fork) { Owner = this }.ShowDialog();
+    }
+
     private void Cancel_Click(object sender, RoutedEventArgs e)
     {
         CancelButton.IsEnabled = false;
@@ -713,6 +720,7 @@ public partial class MainWindow : Window
         foreach (var control in new Control[] { CheckButton, PlayButton, CacheBox, RepoBox, CacheBrowse, RepoBrowse })
             control.IsEnabled = forkChosen;
         WarmButton.IsEnabled = forkChosen && CheckedWarm() != WarmKind.None;
+        ControlsButton.IsEnabled = !TypingUrl;
         CancelButton.IsEnabled = activity == Activity.Warming;
         PlayButton.Content = activity == Activity.Playing ? "GAME RUNNING …" : "START GAME";
     }
