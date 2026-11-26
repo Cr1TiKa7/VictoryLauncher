@@ -77,6 +77,8 @@ Gewählt ist B, weil Fortschritt und weniger Ruckler beide zählen.
 ### Pro Fork
 
 **AnyXboxX:** unverändert.
+Nachtrag: Mit der zusammengeführten Basis von AnyXboxX (04a08f5) gilt das nicht mehr. AnyXboxX hat jetzt dieselben
+zwei Schritte und Leser wie Vice-Tay, und der Shader-Schritt bekommt alle Archive und Programme des Spiels.
 
 **DexNom und VItoriaBr** (beide Art `GameFolder`):
 

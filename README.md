@@ -47,11 +47,12 @@ fork allows it. The launcher cannot tell whether a fork shows a picture on your 
 - **Game folder:** The launcher writes nothing into it.
 - **Program check:** Before the game starts, it lists programs that use video memory or CPU. Nothing is ticked in
   advance. Ticked programs are closed normally; whatever keeps running is only force closed after a second question.
-- **Warmup progress:** It is read from the lines the fork prints. For all forks except AnyXboxX it was written from
-  their sources and has not been tried against the running program. If the lines do not match, you see the last line of
-  the output instead (kelvaroq reports the warmup as incomplete then).
-- **Driver cache:** It does not manage the shader cache of the graphics driver. What the pipeline step of Vice-Tay and
-  VIctory-7900XTX builds is only kept there.
+- **Warmup progress:** It is read from the lines the fork prints. In the running launcher it has only been tried with
+  AnyXboxX (37d4686), whose pipeline step had nothing to build there. For the other forks it was written from their
+  sources, for Vice-Tay also checked against saved logs. If the lines do not match, you see the last line of the output
+  instead (kelvaroq reports the warmup as incomplete then).
+- **Driver cache:** It does not manage the shader cache of the graphics driver. What the pipeline step of AnyXboxX,
+  Vice-Tay and VIctory-7900XTX builds is only kept there.
 
 ## Keyboard controls
 
