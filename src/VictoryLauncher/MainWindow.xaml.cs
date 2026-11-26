@@ -546,7 +546,7 @@ public partial class MainWindow : Window
                 verdicts.Add(verdict);
             }
 
-            var result = verdicts[^1].Summary ?? _warmLine;
+            var result = WarmView.Finished(verdicts, _warmLine);
             EndWarmDisplay(100);
             StatusText.Text = $"Warmup finished after {Clock()}: " + Shorten(Regex.Replace(result, @"\s+", " "), 220);
             _settings = _settings.With(_fork.Id, State with

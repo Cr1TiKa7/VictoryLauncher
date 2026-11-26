@@ -309,6 +309,29 @@ public class WarmViewTests
             WarmView.Of(new WarmStatus(3000, null, null, "shaders"), ["warm"], 0, "1:23", "x"));
 
     [Fact]
+    public void The_success_text_names_the_work_of_every_step()
+    {
+        // the lines of a real warmup with AnyXboxX 37d4686
+        var shaders = new ShaderCacheOutput(null);
+        shaders.Feed("25764 shaders in the cache, 221 do not translate, 119 s");
+        var pipelines = new KnownPipelinesOutput();
+        pipelines.Feed("0 pipelines known, 0 made before (30a6580ce6895303), 0 bad; 0 to make, 21 processes");
+        pipelines.Feed("0 made in 0 s (0 have no host pipeline, 0 ended their process); ms each: median 0.0");
+
+        Assert.Equal("25764 shaders in the cache, 221 do not translate. " +
+                     "No pipelines recorded yet, so there was nothing to build.",
+            WarmView.Finished([shaders.Verdict(), pipelines.Verdict()], "0 made in 0 s"));
+    }
+
+    [Fact]
+    public void The_success_text_of_a_single_summary_stays_as_it_is() =>
+        Assert.Equal("warm  1 translated", WarmView.Finished([new WarmVerdict(true, "warm  1 translated")], "last"));
+
+    [Fact]
+    public void Without_any_summary_the_success_text_is_the_last_line() =>
+        Assert.Equal("containers 5", WarmView.Finished([new WarmVerdict(true)], "containers 5"));
+
+    [Fact]
     public void AnyXboxX_reads_as_before() =>
         Assert.Equal("2,000 of about 25,758 (estimated) shaders · 8% · 1:03",
             WarmView.Of(new WarmStatus(2000, 25758, 7.76, "shaders", true), ["warm"], 0, "1:03", "").Text);
