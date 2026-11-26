@@ -101,6 +101,7 @@ public class WarmPlanTests
     [InlineData(WarmKind.GameFiles)]
     [InlineData(WarmKind.GameFolder)]
     [InlineData(WarmKind.ShaderPack)]
+    [InlineData(WarmKind.Precompile)]
     public void The_other_kinds_get_no_folders(WarmKind kind)
     {
         var cache = Directory.CreateTempSubdirectory("anyx-warm-").FullName;
@@ -132,5 +133,66 @@ public class WarmPlanTests
         {
             Directory.Delete(game, true);
         }
+    }
+
+    private const string PrecompileWithCheck =
+        "Usage: victory.exe precompile [OPTIONS]\n\nOptions:\n      --cache <CACHE>  Cache root\n      --check          Only count";
+
+    [Fact]
+    public void A_precompile_with_check_comes_before_everything_else() =>
+        Assert.Equal(WarmKind.Precompile, WarmPlan.Detect(Help("translate", "precompile", "warm", "run"),
+            WarmFiles, TranslateWithCache, PrecompileWithCheck));
+
+    [Fact]
+    public void A_precompile_without_check_is_not_taken() =>
+        Assert.Equal(WarmKind.ShaderPack, WarmPlan.Detect(Help("translate", "precompile", "run"), "",
+            TranslateWithCache, "Usage: victory.exe precompile"));
+
+    [Fact]
+    public void The_precompile_warmup_is_one_command() =>
+        Assert.Equal([["precompile"]], WarmPlan.Steps(WarmKind.Precompile, @"G:\game"));
+
+    [Theory]
+    [InlineData(WarmKind.GameFiles, "warm", typeof(WarmProgress))]
+    [InlineData(WarmKind.GameFolder, "warm", typeof(WarmProgress))]
+    [InlineData(WarmKind.ShadersThenPipelines, "shaders", typeof(ShaderCacheOutput))]
+    [InlineData(WarmKind.ShadersThenPipelines, "warm", typeof(KnownPipelinesOutput))]
+    [InlineData(WarmKind.ShaderPack, "translate", typeof(ShaderPackOutput))]
+    [InlineData(WarmKind.Precompile, "precompile", typeof(PrecompileOutput))]
+    public void Each_step_gets_its_reader(WarmKind kind, string command, Type reader) =>
+        Assert.IsType(reader, WarmPlan.Reader(kind, [command], null));
+
+    [Fact]
+    public void Only_the_game_files_reader_wants_a_result_line()
+    {
+        Assert.False(WarmPlan.Reader(WarmKind.GameFiles, ["warm"], null).Verdict().Complete);
+        Assert.True(WarmPlan.Reader(WarmKind.GameFolder, ["warm"], null).Verdict().Complete);
+    }
+
+    [Theory]
+    [InlineData(null, WarmProgress.EstimatedTotal, true)]
+    [InlineData(0, WarmProgress.EstimatedTotal, true)]
+    [InlineData(100, 100, false)]
+    public void The_shader_count_uses_the_last_total_or_the_estimate(int? last, int total, bool estimated)
+    {
+        var status = WarmPlan.Reader(WarmKind.GameFiles, ["warm"], last).Status!;
+        Assert.Equal(total, status.Total);
+        Assert.Equal(estimated, status.Estimated);
+    }
+
+    [Theory]
+    [InlineData(WarmKind.GameFiles, null)]
+    [InlineData(WarmKind.GameFolder, null)]
+    [InlineData(WarmKind.ShadersThenPipelines, null)]
+    [InlineData(WarmKind.ShaderPack, null)]
+    [InlineData(WarmKind.Precompile, 120)]
+    public void Only_precompile_is_asked_to_stop_itself(WarmKind kind, int? seconds) =>
+        Assert.Equal(seconds, (int?)WarmPlan.CancelGrace(kind)?.TotalSeconds);
+
+    [Fact]
+    public void The_texts_say_what_the_warmup_cannot_do()
+    {
+        Assert.Contains("does not switch on yet", WarmPlan.About(WarmKind.ShadersThenPipelines));
+        Assert.Contains("Play once first", WarmPlan.About(WarmKind.Precompile));
     }
 }

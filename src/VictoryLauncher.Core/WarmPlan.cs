@@ -14,6 +14,8 @@ public enum WarmKind
     ShadersThenPipelines,
     /// <summary>`translate --cache --pipelines` for the shader pack.</summary>
     ShaderPack,
+    /// <summary>`precompile`: builds the pipelines earlier game runs used (kelvaroq).</summary>
+    Precompile,
 }
 
 /// <summary>Reads the help a built fork prints. Forks change often, so their commands are asked for, not assumed.</summary>
@@ -50,9 +52,13 @@ public static class WarmPlan
     /// <param name="help">Output of `--help`.</param>
     /// <param name="warmHelp">Output of `warm --help`, empty without that command.</param>
     /// <param name="translateHelp">Output of `translate --help`, empty without that command.</param>
-    public static WarmKind Detect(string help, string warmHelp, string translateHelp)
+    /// <param name="precompileHelp">Output of `precompile --help`, empty without that command.</param>
+    public static WarmKind Detect(string help, string warmHelp, string translateHelp, string precompileHelp = "")
     {
         var commands = CliHelp.Commands(help);
+        // --check belongs to the precompile whose output the launcher can read
+        if (commands.Contains("precompile") && CliHelp.HasOption(precompileHelp, "--check"))
+            return WarmKind.Precompile;
         if (commands.Contains("warm"))
         {
             if (CliHelp.HasOption(warmHelp, "--used"))
@@ -75,9 +81,36 @@ public static class WarmPlan
             WarmKind.GameFolder => [["warm", gameDir]],
             WarmKind.ShadersThenPipelines => [["shaders", shaderPack], ["warm", "--used"]],
             WarmKind.ShaderPack => [["translate", "--cache", "--pipelines", "--jobs", "8", shaderPack]],
+            WarmKind.Precompile => [["precompile"]],
             _ => [],
         };
     }
+
+    /// <returns>A new reader for the output of one step.</returns>
+    /// <param name="step">The arguments of that step.</param>
+    /// <param name="lastTotal">The shader total of the last time, for the steps that print none while they run.</param>
+    public static WarmOutput Reader(WarmKind kind, IReadOnlyList<string> step, int? lastTotal)
+    {
+        var estimated = lastTotal is not > 0;
+        var total = estimated ? WarmProgress.EstimatedTotal : lastTotal!.Value;
+        return kind switch
+        {
+            WarmKind.GameFiles => new WarmProgress(total, estimated),
+            WarmKind.GameFolder => new WarmProgress(total, estimated, strict: false),
+            WarmKind.ShadersThenPipelines when step[0] == "shaders" => new ShaderCacheOutput(lastTotal),
+            WarmKind.ShadersThenPipelines => new KnownPipelinesOutput(),
+            WarmKind.ShaderPack => new ShaderPackOutput(),
+            WarmKind.Precompile => new PrecompileOutput(),
+            _ => throw new ArgumentOutOfRangeException(nameof(kind), kind, "This kind has no warmup."),
+        };
+    }
+
+    /// <returns>
+    /// How long a cancelled warmup may take to stop by itself after its input was closed, or null where the process
+    /// is ended right away.
+    /// </returns>
+    public static TimeSpan? CancelGrace(WarmKind kind) =>
+        kind == WarmKind.Precompile ? TimeSpan.FromSeconds(120) : null;
 
     /// <summary>Creates what a warmup expects to be there in the cache.</summary>
     public static void PrepareCache(WarmKind kind, string cacheDir)
@@ -91,8 +124,10 @@ public static class WarmPlan
     public static string About(WarmKind kind) => kind switch
     {
         WarmKind.None => "This fork has no warmup command. The shaders are built while you play.",
-        WarmKind.ShadersThenPipelines => "The warmup translates the shaders and then builds the pipelines that earlier " +
-                                         "game runs used. Before the first run there are none yet.",
+        WarmKind.ShadersThenPipelines => "The warmup translates the shaders. Its second step builds pipelines from a " +
+                                         "record of earlier game runs, which this launcher does not switch on yet.",
+        WarmKind.Precompile => "The warmup builds ahead the pipelines that your earlier game runs used. That helps " +
+                               "mainly after an update, not in places you have not seen yet. Play once first.",
         _ => "",
     };
 }
