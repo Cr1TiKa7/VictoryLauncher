@@ -79,6 +79,14 @@ public static class WarmPlan
         };
     }
 
+    /// <summary>Creates what a warmup expects to be there in the cache.</summary>
+    public static void PrepareCache(WarmKind kind, string cacheDir)
+    {
+        // `warm --used` writes its lists there, but only a game run creates the folder (seen with Vice-Tay).
+        if (kind == WarmKind.ShadersThenPipelines)
+            Directory.CreateDirectory(Path.Combine(cacheDir, "pipelines"));
+    }
+
     /// <returns>A sentence about the kind, or an empty string.</returns>
     public static string About(WarmKind kind) => kind switch
     {

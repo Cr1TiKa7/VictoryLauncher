@@ -70,6 +70,52 @@ public class WarmPlanTests
         Assert.Empty(WarmPlan.Steps(WarmKind.None, @"G:\game"));
     }
 
+    // `warm --used` writes into <cache>\pipelines and fails when only a game run has not created it yet.
+    [Fact]
+    public void The_pipeline_warmup_gets_the_folder_it_writes_into()
+    {
+        var root = Directory.CreateTempSubdirectory("anyx-warm-").FullName;
+        try
+        {
+            var cache = Path.Combine(root, "cache");
+            var pipelines = Path.Combine(cache, "pipelines");
+
+            WarmPlan.PrepareCache(WarmKind.ShadersThenPipelines, cache);
+
+            Assert.True(Directory.Exists(pipelines));
+
+            // again, over what an earlier run left there
+            File.WriteAllText(Path.Combine(pipelines, "warm-done.txt"), "made");
+            WarmPlan.PrepareCache(WarmKind.ShadersThenPipelines, cache);
+
+            Assert.Equal("made", File.ReadAllText(Path.Combine(pipelines, "warm-done.txt")));
+        }
+        finally
+        {
+            Directory.Delete(root, true);
+        }
+    }
+
+    [Theory]
+    [InlineData(WarmKind.None)]
+    [InlineData(WarmKind.GameFiles)]
+    [InlineData(WarmKind.GameFolder)]
+    [InlineData(WarmKind.ShaderPack)]
+    public void The_other_kinds_get_no_folders(WarmKind kind)
+    {
+        var cache = Directory.CreateTempSubdirectory("anyx-warm-").FullName;
+        try
+        {
+            WarmPlan.PrepareCache(kind, cache);
+
+            Assert.Empty(Directory.GetFileSystemEntries(cache));
+        }
+        finally
+        {
+            Directory.Delete(cache, true);
+        }
+    }
+
     [Fact]
     public void The_game_files_kind_passes_every_input()
     {

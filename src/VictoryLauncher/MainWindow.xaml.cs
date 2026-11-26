@@ -483,6 +483,7 @@ public partial class MainWindow : Window
             return;
         }
         var starts = steps.Select(arguments => Game(setup, arguments)).ToList();
+        WarmPlan.PrepareCache(kind, setup.CacheDir);
         var commit = _head;
         // Taken now: it has to describe what this warmup runs with.
         var fingerprint = Fingerprint();
