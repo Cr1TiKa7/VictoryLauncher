@@ -26,8 +26,7 @@ Rockstar Games, Take-Two oder Microsoft noch zu den Autoren der Forks.
 | [VItoriaBr](https://github.com/uiliannn/VItoriaBr) | ja (`warm`) | sein Preset für 8 GB |
 | [victory-fork](https://github.com/fxceless/victory-fork) | nein | `VICTORY_TEXTURE_BACK=1` |
 
-Außer bei AnyXboxX und kelvaroq liest der Launcher die Art des Warmups aus der Hilfe des gebauten Programms. Dazu
-kommt "Eigene Git-URL …" (nur `https://`, Aufbau mit `apps\victory` im Stamm oder unter `third_party\victory`,
+Außer bei AnyXboxX liest der Launcher die Art des Warmups aus der Hilfe des gebauten Programms. Dazu kommt "Eigene Git-URL …" (nur `https://`, Aufbau mit `apps\victory` im Stamm oder unter `third_party\victory`,
 ohne besondere Einstellungen).
 
 Bis auf AnyXboxX sind die Einstellungen eine Momentaufnahme vom 26.11.2026, ausgelegt auf eine NVIDIA-Karte mit
