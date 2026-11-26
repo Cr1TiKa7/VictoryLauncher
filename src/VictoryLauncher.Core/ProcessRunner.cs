@@ -10,11 +10,18 @@ public static class ProcessRunner
     /// Runs a child without a console window. Both pipes are drained as the child writes, otherwise a chatty child
     /// blocks on a full pipe. <paramref name="onLine"/> is called from thread pool threads, possibly at the same time.
     /// </summary>
-    public static async Task<int> RunAsync(ProcessStartInfo start, Action<string> onLine, CancellationToken cancel)
+    /// <param name="closeInputGrace">
+    /// For a child that stops by itself when its input ends: the input is held open, cancelling closes it, and the
+    /// child is only ended when it is still running after this time. Without it, cancelling ends the child at once.
+    /// </param>
+    public static async Task<int> RunAsync(ProcessStartInfo start, Action<string> onLine, CancellationToken cancel,
+        TimeSpan? closeInputGrace = null)
     {
         cancel.ThrowIfCancellationRequested();
         start.UseShellExecute = false;
         start.CreateNoWindow = true;
+        if (closeInputGrace is not null)
+            start.RedirectStandardInput = true;
         start.RedirectStandardOutput = true;
         start.RedirectStandardError = true;
         start.StandardOutputEncoding = Encoding.UTF8;
@@ -32,18 +39,48 @@ public static class ProcessRunner
         }
         catch (OperationCanceledException)
         {
-            try
-            {
-                process.Kill(entireProcessTree: true);
-                process.WaitForExit(10_000);
-            }
-            catch (Exception e) when (e is InvalidOperationException or Win32Exception)
-            {
-                // it ended on its own in the meantime
-            }
+            if (closeInputGrace is not { } grace || !await StoppedByItself(process, grace).ConfigureAwait(false))
+                Kill(process);
             throw;
         }
         return process.ExitCode;
+    }
+
+    /// <returns>Whether the child ended within the grace after its input was closed.</returns>
+    private static async Task<bool> StoppedByItself(Process process, TimeSpan grace)
+    {
+        try
+        {
+            process.StandardInput.Close();
+        }
+        catch (IOException)
+        {
+            // it is just ending
+        }
+        // awaited, not blocking: cancelling comes from the window's thread
+        using var limit = new CancellationTokenSource(grace);
+        try
+        {
+            await process.WaitForExitAsync(limit.Token).ConfigureAwait(false);
+            return true;
+        }
+        catch (OperationCanceledException)
+        {
+            return false;
+        }
+    }
+
+    private static void Kill(Process process)
+    {
+        try
+        {
+            process.Kill(entireProcessTree: true);
+            process.WaitForExit(10_000);
+        }
+        catch (Exception e) when (e is InvalidOperationException or Win32Exception)
+        {
+            // it ended on its own in the meantime
+        }
     }
 }
 

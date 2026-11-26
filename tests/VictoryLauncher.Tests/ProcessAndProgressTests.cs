@@ -1,3 +1,4 @@
+using System.Collections.Concurrent;
 using System.Diagnostics;
 using VictoryLauncher.Core;
 
@@ -98,4 +99,55 @@ public class ProcessRunnerTests
 
     [Fact]
     public void An_unknown_tool_is_null() => Assert.Null(Tools.Find("no-such-tool-anyx"));
+
+    private static ProcessStartInfo PowerShell(string script)
+    {
+        var psi = new ProcessStartInfo("powershell.exe");
+        foreach (var argument in new[] { "-NoProfile", "-NonInteractive", "-Command", script })
+            psi.ArgumentList.Add(argument);
+        return psi;
+    }
+
+    private static readonly TimeSpan Grace = TimeSpan.FromSeconds(30);
+
+    [Fact]
+    public async Task The_input_stays_open_while_the_child_works()
+    {
+        var lines = new ConcurrentQueue<string>();
+        var code = await ProcessRunner.RunAsync(PowerShell(
+            "$r = [Console]::OpenStandardInput().ReadAsync((New-Object byte[] 1), 0, 1); " +
+            "Start-Sleep -Milliseconds 1500; \"ended=$($r.IsCompleted)\"; exit 0"),
+            lines.Enqueue, CancellationToken.None, Grace).WaitAsync(TimeSpan.FromSeconds(60));
+        Assert.Equal(0, code);
+        Assert.Contains("ended=False", lines);
+    }
+
+    [Fact]
+    public async Task Cancel_closes_the_input_and_lets_the_child_finish()
+    {
+        var lines = new ConcurrentQueue<string>();
+        using var cts = new CancellationTokenSource();
+        var run = ProcessRunner.RunAsync(PowerShell(
+            "'ready'; $null = [Console]::In.ReadToEnd(); Start-Sleep -Milliseconds 500; 'saved'"),
+            // not Cancel() here: what waits for it would go on inside this callback, which is still reading the output
+            line => { lines.Enqueue(line); if (line == "ready") cts.CancelAfter(1); }, cts.Token, Grace);
+
+        await Assert.ThrowsAnyAsync<OperationCanceledException>(() => run.WaitAsync(TimeSpan.FromSeconds(60)));
+        Assert.Contains("saved", lines);
+    }
+
+    [Fact]
+    public async Task A_child_that_ignores_the_closed_input_is_killed_after_the_grace()
+    {
+        using var cts = new CancellationTokenSource(500);
+        var watch = Stopwatch.StartNew();
+        await Assert.ThrowsAnyAsync<OperationCanceledException>(() => ProcessRunner.RunAsync(
+            Cmd("ping -n 30 127.0.0.1"), _ => { }, cts.Token, TimeSpan.FromSeconds(1)));
+        Assert.InRange(watch.Elapsed, TimeSpan.FromSeconds(1.4), TimeSpan.FromSeconds(15));
+    }
+
+    [Fact]
+    public async Task A_child_with_an_open_input_that_ends_by_itself_returns_its_code() =>
+        Assert.Equal(7, await ProcessRunner.RunAsync(Cmd("exit 7"), _ => { }, CancellationToken.None, Grace)
+            .WaitAsync(TimeSpan.FromSeconds(60)));
 }
