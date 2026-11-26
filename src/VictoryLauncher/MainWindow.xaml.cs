@@ -447,11 +447,9 @@ public partial class MainWindow : Window
         return start;
     }
 
-    /// <summary>The fork's own way if it is fixed, otherwise what the built program's help offers.</summary>
+    /// <summary>What the built program's help offers, adjusted to the fork.</summary>
     private async Task<WarmKind> WarmKindOf(ForkSetup setup)
     {
-        if (setup.Fork.Warm is { } known)
-            return known;
         try
         {
             var help = await Help(setup, "--help");
@@ -459,7 +457,8 @@ public partial class MainWindow : Window
             var warm = commands.Contains("warm") ? await Help(setup, "warm", "--help") : "";
             var translate = commands.Contains("translate") ? await Help(setup, "translate", "--help") : "";
             var precompile = commands.Contains("precompile") ? await Help(setup, "precompile", "--help") : "";
-            var kind = WarmPlan.Detect(help, warm, translate, precompile);
+            var kind = WarmPlan.Refine(WarmPlan.Detect(help, warm, translate, precompile),
+                setup.Fork.WarmsEveryGameFile);
             _log.Add($"Warmup kind according to the help of the program: {kind}");
             return kind;
         }
@@ -491,7 +490,7 @@ public partial class MainWindow : Window
 
         var setup = Setup;
         var kind = CheckedWarm() ?? WarmKind.None;
-        var steps = WarmPlan.Steps(kind, setup.GameDir);
+        var steps = WarmPlan.Steps(kind, setup.GameDir, setup.Fork.WarmsEveryGameFile);
         if (steps.Count == 0)
         {
             StatusText.Text = WarmPlan.About(WarmKind.None);

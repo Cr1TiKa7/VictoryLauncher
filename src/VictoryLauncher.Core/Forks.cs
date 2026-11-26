@@ -29,8 +29,10 @@ public sealed record ForkProfile
 
     public bool RunsFromExeFolder { get; init; }
 
-    /// <summary>Null: read it from the built program's help.</summary>
-    public WarmKind? Warm { get; init; }
+    /// <summary>
+    /// Not all of the fork's shaders are in the shader pack: its warmup is given every archive and binary of the game.
+    /// </summary>
+    public bool WarmsEveryGameFile { get; init; }
 
     /// <summary>A file in the checkout with the VICTORY_* tables; read again after every update.</summary>
     public string? TuningFile { get; init; }
@@ -69,9 +71,7 @@ public static partial class ForkCatalog
         {
             Id = DefaultId, Name = "AnyXboxX (LooperSalty)", Url = "https://github.com/LooperSalty/AnyXboxX",
             RuntimeDir = @"third_party\victory", TuningFile = @"crates\anyxboxx\src\run\settings.rs",
-            Warm = WarmKind.GameFiles, OwnDataDir = false, Keys = KeyScheme.ByPosition,
-            // its table is sized for bigger cards
-            Settings = Table("CARD_BUFFERS_MB=1024"),
+            WarmsEveryGameFile = true, OwnDataDir = false, Keys = KeyScheme.ByPosition,
             Note = "Settings from crates\\anyxboxx\\src\\run\\settings.rs (the values of \"anyxboxx run\"), " +
                    "they follow the updates.",
         },

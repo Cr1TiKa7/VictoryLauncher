@@ -72,8 +72,10 @@ public class ForkCatalogTests
         Assert.Equal(@"crates\anyxboxx\src\run\settings.rs",
             Assert.Single(ForkCatalog.BuiltIn, f => f.TuningFile is not null).TuningFile);
         Assert.Equal("third_party\\victory", shared.RuntimeDir);
-        Assert.Equal("1024", shared.Settings["VICTORY_CARD_BUFFERS_MB"]);
-        Assert.Equal(WarmKind.GameFiles, shared.Warm);
+        // its settings are the ones of its table and nothing else
+        Assert.Empty(shared.Settings);
+        // its shaders are not all in the shader pack
+        Assert.Same(shared, Assert.Single(ForkCatalog.BuiltIn, f => f.WarmsEveryGameFile));
     }
 
     [Fact]
@@ -94,7 +96,7 @@ public class ForkCatalogTests
         Assert.Matches("^custom-some-one-my-victory-[0-9a-f]{8}$", fork.Id);
         Assert.Equal(fork.Id, ForkCatalog.Custom("https://github.com/some.one/my_victory").Id);
         Assert.Null(fork.RuntimeDir);
-        Assert.Null(fork.Warm);
+        Assert.False(fork.WarmsEveryGameFile);
         Assert.Empty(fork.Settings);
         Assert.True(fork.OwnDataDir);
     }
