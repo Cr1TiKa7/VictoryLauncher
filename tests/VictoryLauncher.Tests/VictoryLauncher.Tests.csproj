@@ -17,6 +17,7 @@
   <ItemGroup>
     <None Include="fixtures\**" CopyToOutputDirectory="PreserveNewest" />
     <None Include="..\..\packaging\Get-ReleaseVersion.ps1" Link="Get-ReleaseVersion.ps1" CopyToOutputDirectory="PreserveNewest" />
+    <None Include="..\..\packaging\Get-ReleaseNotes.ps1" Link="Get-ReleaseNotes.ps1" CopyToOutputDirectory="PreserveNewest" />
     <Using Include="Xunit" />
   </ItemGroup>
 

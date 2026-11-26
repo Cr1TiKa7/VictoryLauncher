@@ -128,6 +128,15 @@ git tag v1.0.0
 git push origin v1.0.0
 ```
 
+The release notes list the titles of the commits since the release before that changed something in `src`, so those
+titles are written for the people who use the launcher. Commits that only touch docs, tests or the build are left out,
+and merge commits too. The notes can still be edited on GitHub afterwards. They come from
+[Get-ReleaseNotes.ps1](packaging/Get-ReleaseNotes.ps1), which you can run yourself to see them before a release:
+
+```powershell
+./packaging/Get-ReleaseNotes.ps1 -Tag v1.1.0 -Repository Cr1TiKa7/VictoryLauncher
+```
+
 Every push to `main` and every pull request also runs the tests and builds a ZIP (version `0.0.0`) that is attached to
 the run as an artifact, without creating a release. The rules for the version number are in
-[Get-ReleaseVersion.ps1](packaging/Get-ReleaseVersion.ps1). Its tests need PowerShell 7.
+[Get-ReleaseVersion.ps1](packaging/Get-ReleaseVersion.ps1). The tests of both scripts need PowerShell 7.
