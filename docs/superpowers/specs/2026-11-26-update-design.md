@@ -50,10 +50,26 @@ Gewählt außerdem: Das Update läuft erst nach einem Klick, nicht ohne Rückfra
 - Aus der ZIP wird nur `VictoryLauncher.exe` entpackt.
 - Tausch: neue EXE daneben schreiben, laufende EXE umbenennen (`.old-…`), neue an ihren Platz. Schlägt der letzte
   Schritt fehl, kommt die alte zurück.
-- Der Launcher speichert die Einstellungen, startet die neue EXE mit `--after-update <pid>` und beendet sich. Die
-  neue wartet auf das Ende der alten und räumt dann die Reste weg. Lässt sie sich nicht starten, kommt die alte
-  zurück.
-- `settings.json` und `logs\` bleiben unberührt.
+- Vor dem Tausch speichert der Launcher die Einstellungen und bereitet den Neustart vor. Danach schließt er sich
+  und startet die neue EXE mit `--after-update <pid>`. Die neue wartet auf das Ende der alten und räumt dann die
+  Reste weg. Lässt sie sich nicht starten, kommt die alte zurück.
+- Das Update selbst fasst `settings.json` und `logs\` nicht an.
+
+## Nach dem Tausch nichts mehr nachladen (nach 1.0.0 ergänzt)
+
+Eine Ein-Datei-EXE lädt ihre Teile erst bei Bedarf aus der eigenen Datei. Nach dem Tausch liegt dort die neue Version.
+Ist sie anders aufgebaut (die von der Action gebaute EXE war es), schlägt in der alten jedes erste Nachladen fehl. In
+1.0.0 traf das `System.IO.Pipelines` beim letzten Speichern: Eine kurz vor dem Klick eingetippte Änderung ging
+verloren.
+
+- Der Tausch ist der letzte Schritt. Danach speichert die alte Version nicht mehr.
+- Der Neustart steht in einem `finally`: Er läuft auch, wenn beim Schließen vorher etwas wirft.
+- Dafür gibt es keinen automatischen Test, weil der Fehler zwei verschieden aufgebaute Ein-Datei-EXEn braucht. Wer
+  den Update-Weg ändert, prüft in der echten App mit zwei Wegwerf-Kopien, in denen nur die beiden Adressen auf einen
+  lokalen Server zeigen. Die Nachfolgerin wird mit `-p:EnableCompressionInSingleFile=true` gebaut. Zwei exakt gleich
+  große EXEn beweisen nichts.
+- Version 1.0.0 aktualisiert noch mit dem alten Code. Auf eine anders gebaute Version startet sie normal neu, nur ihr
+  letztes Speichern schlägt fehl.
 
 ## Einstellungen schützen (beim Prüfen ergänzt)
 
@@ -71,4 +87,4 @@ Standardwerte über die echte Datei gespeichert.
 
 - Die EXE ist nicht signiert. Prüfsumme und Datei kommen aus demselben GitHub-Konto: Das erkennt beschädigte
   Downloads, schützt aber nicht, wenn jemand das Konto übernimmt.
-- Der Weg über echte GitHub-Releases ist erst prüfbar, wenn es welche gibt.
+- Der Weg über ein echtes GitHub-Release ist einmal per Klick geprüft (lokal gebaute 0.9.0 auf 1.0.0).

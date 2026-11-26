@@ -226,8 +226,8 @@ public static partial class AppUpdate
     public static string[] RestartArguments(int processId) => [AfterUpdate, processId.ToString()];
 
     /// <summary>
-    /// Waits for the version that started this one. It saves the settings while it ends and holds its own program
-    /// file until then.
+    /// Waits for the version that started this one: it holds its own program file until it has ended. Versions up to
+    /// 1.0.0 also save the settings only then.
     /// </summary>
     public static void WaitForPredecessor(IReadOnlyList<string> arguments, TimeSpan limit)
     {

@@ -69,9 +69,17 @@ public partial class MainWindow : Window
         Closing += OnClosing;
         Closed += (_, _) =>
         {
-            SaveSettings();
-            _log.Dispose();
-            StartSuccessor();
+            try
+            {
+                // With an update in place, Update_Click has saved already, and saving may no longer work.
+                if (_successor is null)
+                    SaveSettings();
+                _log.Dispose();
+            }
+            finally
+            {
+                StartSuccessor();
+            }
         };
         SetActivity(Activity.Idle);
     }

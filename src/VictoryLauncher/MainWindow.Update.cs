@@ -27,8 +27,8 @@ public partial class MainWindow
 
     private UpdateInfo? _update;
     private int _downloadPercent = -1;
-    // Set once the new program is in place. It is started when this window has saved everything and closed.
-    private (string Exe, string Old)? _successor;
+    // Set once the new program is in place. It is started when this window has closed.
+    private (ProcessStartInfo Start, string Old)? _successor;
 
     /// <summary>Runs next to whatever else happens on opening. Nothing here may get in the way.</summary>
     private async Task CheckForUpdate()
@@ -81,8 +81,13 @@ public partial class MainWindow
                 Volatile.Write(ref _downloadPercent, -1);
             }
             AllowCancel(false);
-            _successor = (exe, AppUpdate.Swap(fresh, exe));
-            _log.Add($"Version {update.Version} liegt bereit, starte neu.");
+            // A single file loads its parts from its own file when they are first needed. The swap puts another
+            // program there, so what has not been used by then cannot be loaded any more. Saving and preparing the
+            // restart come first, and the swap is the last step.
+            SaveSettings();
+            var restart = RestartOf(exe);
+            _log.Add($"Version {update.Version} ist geladen, tausche und starte neu.");
+            _successor = (restart, AppUpdate.Swap(fresh, exe));
         }
         catch (OperationCanceledException)
         {
@@ -106,6 +111,14 @@ public partial class MainWindow
             Close();
     }
 
+    private static ProcessStartInfo RestartOf(string exe)
+    {
+        var start = new ProcessStartInfo(exe) { WorkingDirectory = Path.GetDirectoryName(exe)! };
+        foreach (var argument in AppUpdate.RestartArguments(Environment.ProcessId))
+            start.ArgumentList.Add(argument);
+        return start;
+    }
+
     /// <summary>The last thing before the process ends.</summary>
     private void StartSuccessor()
     {
@@ -113,17 +126,14 @@ public partial class MainWindow
             return;
         try
         {
-            var start = new ProcessStartInfo(successor.Exe) { WorkingDirectory = Path.GetDirectoryName(successor.Exe)! };
-            foreach (var argument in AppUpdate.RestartArguments(Environment.ProcessId))
-                start.ArgumentList.Add(argument);
-            using var started = Process.Start(start);
+            using var started = Process.Start(successor.Start);
         }
         catch (Exception problem)
         {
             string aftermath;
             try
             {
-                AppUpdate.Restore(successor.Old, successor.Exe);
+                AppUpdate.Restore(successor.Old, successor.Start.FileName);
                 aftermath = "Die alte Version ist wieder an ihrem Platz.";
             }
             catch (Exception e) when (e is IOException or UnauthorizedAccessException)

@@ -9,7 +9,7 @@ public partial class App : Application
 
     protected override void OnStartup(StartupEventArgs e)
     {
-        // After an update the old version is still ending. It saves the settings this one is about to read.
+        // After an update the old version is still ending. It still holds files this one is about to tidy up.
         AppUpdate.WaitForPredecessor(e.Args, PredecessorLimit);
         if (Environment.ProcessPath is { } exe)
             AppUpdate.CleanUp(exe);
