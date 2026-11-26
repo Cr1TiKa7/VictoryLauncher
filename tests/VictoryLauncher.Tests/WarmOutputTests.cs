@@ -167,3 +167,116 @@ public class KnownPipelinesOutputTests
         Assert.Equal(new WarmVerdict(true), reader.Verdict());
     }
 }
+
+// klbf-lab 0c529ca, apps/victory/src/prebuild.rs
+public class ShaderPackOutputTests
+{
+    private const string Start =
+        "pipelines    52000 in the pack, 1000 already pre-built, 51000 to make on 8 threads";
+
+    [Fact]
+    public void Reads_a_report_behind_a_path_with_a_drive_letter()
+    {
+        var reader = new ShaderPackOutput();
+        reader.Feed(Start);
+        Assert.Equal("0 of 51,000 pipelines · 0%", reader.Status!.Describe());
+        reader.Feed(@"G:\DevElop\shaders.rpf: 600/51000 pipelines, 590 made, 10 found in the library, 61 s");
+        Assert.Equal("600 of 51,000 pipelines · 1%", reader.Status!.Describe());
+    }
+
+    [Fact]
+    public void More_than_the_total_stays_at_the_total_and_99_percent()
+    {
+        var reader = new ShaderPackOutput();
+        reader.Feed(@"D:\my games: old\shaders.rpf: 103/100 pipelines, 100 made, 3 found in the library, 5 s");
+        Assert.Equal(100, reader.Status!.Count);
+        Assert.Equal(99, reader.Status!.Percent);
+    }
+
+    [Fact]
+    public void The_end_line_sums_up()
+    {
+        var reader = new ShaderPackOutput();
+        reader.Feed(Start);
+        reader.Feed("pipelines    52000 in the pack, 3600.4 s: 50000 made, 1000 found in the library, 1000 already pre-built");
+        Assert.Equal(100, reader.Status!.Percent);
+        Assert.Equal(new WarmVerdict(true, "50000 pipelines built, 1000 found in the library, 1000 already pre-built"),
+            reader.Verdict());
+    }
+
+    [Fact]
+    public void Nothing_to_make_shows_no_percentage()
+    {
+        var reader = new ShaderPackOutput();
+        reader.Feed("pipelines    52000 in the pack, 52000 already pre-built, 0 to make on 8 threads");
+        Assert.Null(reader.Status);
+        Assert.True(reader.Verdict().Complete);
+    }
+
+    [Theory]
+    [InlineData("2026-11-26T10:00:00Z  INFO victory_gpu::pipeline: host pipeline library saved bytes=5 made=3")]
+    [InlineData("pipelines    no shader pack among the files: nothing to pre-build")]
+    [InlineData("x: 99999999999999999999/100 pipelines, 1 made, 0 found in the library, 5 s")]
+    public void Other_lines_are_not_progress(string line)
+    {
+        var reader = new ShaderPackOutput();
+        reader.Feed(line);
+        Assert.Null(reader.Status);
+    }
+
+    [Fact]
+    public void A_failed_run_says_to_start_again() =>
+        Assert.Equal("Start the warmup again: it then skips the pipeline the driver died on.",
+            new ShaderPackOutput().FailureHint);
+}
+
+// kelvaroq 1270c42, native/patches/0059-preload.patch
+public class PrecompileOutputTests
+{
+    private static PrecompileOutput Fed(params string[] lines)
+    {
+        var reader = new PrecompileOutput();
+        foreach (var line in lines)
+            reader.Feed(line);
+        return reader;
+    }
+
+    [Fact]
+    public void Shows_done_of_total() =>
+        Assert.Equal("2 of 3 pipelines · 67%", Fed("precompile 0 3 0", "precompile 2 3 0").Status!.Describe());
+
+    [Fact]
+    public void Almost_done_is_not_100_percent() =>
+        Assert.Equal(99, Fed("precompile 999 1000 0").Status!.Percent);
+
+    [Fact]
+    public void Nothing_to_do_is_done()
+    {
+        var reader = Fed("precompile 0 0 0");
+        Assert.Null(reader.Status);
+        Assert.Equal(new WarmVerdict(true, "Nothing to build: kelvaroq only knows pipelines that a game run has used."),
+            reader.Verdict());
+    }
+
+    [Fact]
+    public void Stopping_early_is_unfinished() =>
+        Assert.Equal(new WarmVerdict(false, "Warmup incomplete: 0 of 3 pipelines. Start it again."),
+            Fed("precompile 0 3 0").Verdict());
+
+    [Fact]
+    public void No_report_at_all_is_unfinished() =>
+        Assert.Equal(new WarmVerdict(false, "Warmup incomplete: the program reported no progress. Start it again."),
+            Fed().Verdict());
+
+    [Theory]
+    [InlineData("precompile 3 3 0", "3 pipelines built")]
+    [InlineData("precompile 3 3 1", "2 pipelines built, 1 failed and will be tried again next time")]
+    public void The_end_sums_up(string line, string summary) =>
+        Assert.Equal(new WarmVerdict(true, summary), Fed(line).Verdict());
+
+    [Theory]
+    [InlineData("precompile-check 3")]
+    [InlineData("WARN precompile 1 2 3 could not be saved")]
+    [InlineData("precompile 99999999999999999999 3 0")]
+    public void Other_lines_are_not_progress(string line) => Assert.Null(Fed(line).Status);
+}
