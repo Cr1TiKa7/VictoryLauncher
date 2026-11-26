@@ -52,6 +52,9 @@ public sealed record ForkProfile
     /// <summary>A note shown with the fork.</summary>
     public string Note { get; init; } = "";
 
+    /// <summary>What is known about this fork as a Series S, shown while that is chosen.</summary>
+    public string SeriesSNote { get; init; } = "";
+
     public bool IsCustom { get; init; }
 }
 
@@ -74,13 +77,17 @@ public static partial class ForkCatalog
             WarmsEveryGameFile = true, OwnDataDir = false, Keys = KeyScheme.ByPosition,
             Note = "Settings from crates\\anyxboxx\\src\\run\\settings.rs (the values of \"anyxboxx run\"), " +
                    "they follow the updates.",
+            SeriesSNote = "Its runtime README: about 5 ms a frame faster, a softer picture (measured on AMD). " +
+                          "The launcher of AnyXboxX does not offer Series S.",
         },
         new()
         {
             Id = "klbf-lab", Name = "klbf-lab (PastiiJay)", Url = "https://github.com/PastiiJay/klbf-lab",
             Settings = Table("LATE_WAIT=1", "WIDE_BACK=1", "PIPELINE_WAIT_MS=24", "RELAY_COPY_QUEUE=0"),
-            Note = "Tuned for AMD. Without the Series S profile, which would need AMD's FidelityFX SDK. " +
-                   "The start screen and the menu may stay black, then press A on the controller.",
+            Note = "Tuned for AMD. The start screen and the menu may stay black, then press A on the controller.",
+            SeriesSNote = "Its README recommends Series S, but that needs AMD's FidelityFX SDK in VICTORY_FFX_DIR. " +
+                          "The launcher does not pass this variable on: according to the README the game then " +
+                          "crashes once it starts upscaling.",
         },
         new()
         {
@@ -94,6 +101,8 @@ public static partial class ForkCatalog
                 "THIN=1", "JOIN_PARTS=8", "UPLOAD_AHEAD=1", "INDIRECT_BATCH=2", "FULLSCREEN=1"),
             Note = "Settings from its play.ps1 for NVIDIA (measured on an RTX 4090 with 16 cores). " +
                    "Full screen, F11 switches to a window. The author expects plenty of RAM.",
+            SeriesSNote = "Its author plays all sessions on Series S. Its README: a smaller picture, lighter on " +
+                          "the card, faster.",
         },
         new()
         {
@@ -105,6 +114,8 @@ public static partial class ForkCatalog
                 "TITLE_PRIORITIES=0", "CARD_AWAKE=1", "SHOW_AFTER=1", "AMBIENT=0.8", "D3D12_DRED=light",
                 "THIN=1", "JOIN_PARTS=8", "UPLOAD_AHEAD=1"),
             Note = "Tuned for an AMD RX 7900 XTX. The author has not measured it on NVIDIA.",
+            SeriesSNote = "Its README calls Series S about 5 ms a frame faster, but one of its tables shows it " +
+                          "slower than Series X with 1080p output (measured on AMD).",
         },
         new()
         {
@@ -120,6 +131,7 @@ public static partial class ForkCatalog
             Note = "Its own layout: also needs Python 3.11+ and the Windows SDK. The second build step " +
                    "downloads a fixed state of fxceless/victory-fork, applies patches and temporarily maps " +
                    "a drive for that (subst). It cannot be cancelled.",
+            SeriesSNote = "Its README names the switch, but says nothing about how well Series S works.",
         },
         new()
         {
@@ -129,12 +141,15 @@ public static partial class ForkCatalog
                 "AMBIENT=0.6", "TEXTURE_NO_WAIT=1", "WIDE_REFRESH=1", "WIDE_MERGE=1", "JOIN_COPIES=1",
                 "DISPLAY_MODE=1920x1080"),
             Note = "The author's preset for 8 GB cards, the one for 16 GB is too large for 10 GB.",
+            SeriesSNote = "The fork knows the switch, its README says nothing about Series S.",
         },
         new()
         {
             Id = "victory-fork", Name = "victory-fork (fxceless)", Url = "https://github.com/fxceless/victory-fork",
             Settings = Table("TEXTURE_BACK=1"),
             Note = "According to the author, measured on an RTX 4070 with 12 GB.",
+            SeriesSNote = "A tester of this fork got a black picture in the world with Series S " +
+                          "(run 304 in its diagnostics).",
         },
         new()
         {
@@ -152,6 +167,7 @@ public static partial class ForkCatalog
             Note = "Its experimental NVIDIA mode, ray tracing and FSR off. Developed for an AMD Radeon with 24 GB, " +
                    "NVIDIA gameplay is untested by the author. The build downloads format tables from " +
                    "Marvisak/VIctory and checks their SHA-256.",
+            SeriesSNote = "The fork knows the switch, but the starters of its author all use Series X.",
         },
     ];
 
@@ -175,6 +191,7 @@ public static partial class ForkCatalog
             RuntimeDir = null,
             IsCustom = true,
             Note = "Own URL: no special settings, the defaults of the runtime apply.",
+            SeriesSNote = "Not checked for an own Git URL. A program that does not know the switch will not start.",
         };
     }
 

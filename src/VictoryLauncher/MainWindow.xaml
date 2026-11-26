@@ -85,8 +85,18 @@
             <DockPanel DockPanel.Dock="Top">
                 <Button DockPanel.Dock="Right" x:Name="ControlsButton" Content="CONTROLS" Width="130" Height="54"
                         Margin="12,0,0,0" Click="Controls_Click" />
+                <!-- in this row so that the choice costs no height: the smallest window has none to spare -->
+                <ComboBox DockPanel.Dock="Right" x:Name="ConsoleBox" Width="180" Height="54" Margin="12,0,0,0"
+                          SelectionChanged="Console_Changed">
+                    <ComboBoxItem Content="Series X (default)" />
+                    <ComboBoxItem Content="Series S" />
+                </ComboBox>
                 <Button x:Name="PlayButton" Content="START GAME" Style="{StaticResource PlayButtonStyle}" Click="Play_Click" />
             </DockPanel>
+
+            <!-- below the start button: it takes its room from the log and never moves the button -->
+            <TextBlock DockPanel.Dock="Top" x:Name="ConsoleNote" Style="{StaticResource Note}" Margin="1,8,0,0"
+                       Foreground="{StaticResource Amber}" Visibility="Collapsed" />
 
             <TextBox x:Name="LogBox" Margin="0,16,0,0" Style="{StaticResource LogStyle}" IsReadOnly="True"
                      VerticalScrollBarVisibility="Auto" HorizontalScrollBarVisibility="Auto" TextWrapping="NoWrap" />

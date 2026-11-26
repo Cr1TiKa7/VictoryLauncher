@@ -144,6 +144,8 @@ public partial class MainWindow : Window
                 setup.DataDir is { } data ? $"Save games: {data}" : null,
             }.Where(line => !string.IsNullOrEmpty(line)));
 
+        ConsoleBox.SelectedIndex = !typing && State.SeriesS ? 1 : 0;
+        ShowConsoleNote();
         GameBox.Text = _settings.GameDir;
         CacheBox.Text = typing ? "" : setup.CacheDir;
         RepoBox.Text = typing ? "" : setup.RepoDir;
@@ -156,6 +158,25 @@ public partial class MainWindow : Window
         _showing = showing;
         ShowCheckButton();
         ShowHint();
+    }
+
+    private void Console_Changed(object sender, SelectionChangedEventArgs e)
+    {
+        if (_showing)
+            return;
+        _settings = _settings.With(_fork.Id, State with { SeriesS = ConsoleBox.SelectedIndex == 1 });
+        SaveSettings();
+        ShowConsoleNote();
+    }
+
+    /// <summary>Series X is what every fork does by itself; only Series S comes with something to know.</summary>
+    private void ShowConsoleNote()
+    {
+        var shown = !TypingUrl && State.SeriesS;
+        ConsoleNote.Text = shown ? $"{_fork.SeriesSNote} Not tried with this launcher." : "";
+        ConsoleNote.Visibility = shown ? Visibility.Visible : Visibility.Collapsed;
+        // in a small window there may be no room left for the note itself
+        ConsoleBox.ToolTip = shown ? ConsoleNote.Text : "The console the game sees.";
     }
 
     private void ShowCheckButton() =>
@@ -596,10 +617,10 @@ public partial class MainWindow : Window
         }
 
         var setup = Setup;
-        var start = Game(setup, ["run", setup.GameExe(), "--execute"]);
+        var start = Game(setup, setup.PlayArguments());
         SaveSettings();
         _log.Open(Path.Combine(Home, "logs", "game.log"));
-        _log.Add($"Fork: {_fork.Name}, Commit {_head}");
+        _log.Add($"Fork: {_fork.Name}, Commit {_head}, Console: {(setup.SeriesS ? "Series S" : "Series X")}");
         _clock.Restart();
         SetActivity(Activity.Playing);
         var code = await ProcessRunner.RunAsync(start, _log.Add, CancellationToken.None);
@@ -738,7 +759,7 @@ public partial class MainWindow : Window
         foreach (var control in new Control[] { ForkBox, UrlBox, AddUrlButton, RemoveForkButton, GameBox, GameBrowse, UpdateButton })
             control.IsEnabled = idle;
         var forkChosen = idle && !TypingUrl;
-        foreach (var control in new Control[] { CheckButton, PlayButton, CacheBox, RepoBox, CacheBrowse, RepoBrowse })
+        foreach (var control in new Control[] { CheckButton, PlayButton, ConsoleBox, CacheBox, RepoBox, CacheBrowse, RepoBrowse })
             control.IsEnabled = forkChosen;
         WarmButton.IsEnabled = forkChosen && CheckedWarm() != WarmKind.None;
         ControlsButton.IsEnabled = !TypingUrl;

@@ -22,7 +22,7 @@ Games, Take-Two or Microsoft, nor with the authors of the forks.
 | Fork | Warmup | Settings |
 |------|--------|----------|
 | [AnyXboxX](https://github.com/LooperSalty/AnyXboxX) | yes (`shaders` with every archive and binary of the game: a count, from the second time a percentage; the pipeline step has nothing to build yet) | from `crates\anyxboxx\src\run\settings.rs`, they follow the updates |
-| [klbf-lab](https://github.com/PastiiJay/klbf-lab) | yes (`translate`), with a percentage | from the README of the fork, without the Series S profile |
+| [klbf-lab](https://github.com/PastiiJay/klbf-lab) | yes (`translate`), with a percentage | from the README of the fork, without its Series S setup |
 | [Vice-Tay](https://github.com/TaynanGT/Vice-Tay) | yes (`shaders`: a count, from the second time a percentage; the pipeline step has nothing to build yet) | from its `play.ps1` (NVIDIA) |
 | [VIctory-7900XTX](https://github.com/avatarmanz/VIctory-7900XTX) | yes (`shaders`: a count, from the second time a percentage; the pipeline step has nothing to build yet) | from its `play.ps1`, tuned for AMD |
 | [kelvaroq](https://github.com/fablinoo/kelvaroq) | yes (`precompile`): the pipelines of earlier game runs, with a percentage | the tier for 10 GB |
@@ -53,6 +53,18 @@ fork allows it. The launcher cannot tell whether a fork shows a picture on your 
   instead (kelvaroq reports the warmup as incomplete then).
 - **Driver cache:** It does not manage the shader cache of the graphics driver. What the pipeline step of AnyXboxX,
   Vice-Tay and VIctory-7900XTX builds is only kept there.
+
+## Console: Series X or Series S
+
+The list next to **Start game** sets which console the game sees, for each fork on its own. **Series X** is what every
+built in fork does by itself and the default; the launcher then starts the game as before. With **Series S** it adds
+`--console series-s` to the start of the game. The warmup is not changed.
+
+With Series S the launcher shows below what is known about the fork, taken from its own files on 2026-11-26 (in a
+small window the note may only be visible as the tooltip of the list). The authors disagree: some describe it as
+lighter and faster, one fork's table shows it slower than Series X with 1080p output, and a tester of another got a
+black picture. klbf-lab would need AMD's FidelityFX SDK for it, which the launcher does not pass on to the game. The
+game has not been started as a Series S with this launcher.
 
 ## Keyboard controls
 

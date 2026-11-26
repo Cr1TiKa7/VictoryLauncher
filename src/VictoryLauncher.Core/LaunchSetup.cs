@@ -20,6 +20,9 @@ public sealed record ForkState
 
     /// <summary>The address the user agreed to build and run.</summary>
     public string? TrustedUrl { get; init; }
+
+    /// <summary>The game sees a Series S instead of a Series X.</summary>
+    public bool SeriesS { get; init; }
 }
 
 public sealed record LauncherSettings
@@ -72,7 +75,7 @@ public sealed record LauncherSettings
             : Path.Combine(DataRoot, "forks", fork.Id));
         var cache = state.CacheDir ?? Path.Combine(DataRoot, "cache-" + fork.Id);
         var data = fork.OwnDataDir ? Path.Combine(DataRoot, "data-" + fork.Id) : null;
-        return new(fork, repo, cache, data, GameDir);
+        return new(fork, repo, cache, data, GameDir) { SeriesS = state.SeriesS };
     }
 
     // Somebody else may hold the file for a moment, a virus scanner for example.
@@ -171,6 +174,16 @@ public sealed record ForkSetup(ForkProfile Fork, string RepoDir, string CacheDir
 
     /// <summary>The layouts an own URL may have: the runtime at the root, or kept under third_party.</summary>
     private static readonly string[] KnownLayouts = ["", @"third_party\victory"];
+
+    /// <summary>The game sees a Series S instead of a Series X.</summary>
+    public bool SeriesS { get; init; }
+
+    /// <summary>
+    /// How the game is started. Series X is the runtime's own default, so only Series S is named.
+    /// </summary>
+    public IReadOnlyList<string> PlayArguments() => SeriesS
+        ? ["run", GameExe(), "--execute", "--console", "series-s"]
+        : ["run", GameExe(), "--execute"];
 
     /// <returns>The full path of the runtime folder, or null while an own fork shows no known layout.</returns>
     public string? RuntimeDir() => Relative() is { } relative ? Path.Combine(RepoDir, relative) : null;
