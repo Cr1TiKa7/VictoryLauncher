@@ -1,6 +1,5 @@
 ﻿using System.ComponentModel;
 using System.Diagnostics;
-using System.Globalization;
 using System.IO;
 using System.Text.RegularExpressions;
 using System.Windows;
@@ -37,9 +36,13 @@ public partial class MainWindow : Window
     private string _head = "";
     // What the last check found, and the fork and checkout it belongs to.
     private (string ForkId, string RepoDir, string? SourceId, WarmKind Warm)? _checked;
-    // The running warmup: the precise progress where a fork reports it, otherwise step and last line.
-    private WarmProgress? _warm;
-    private string _warmStep = "", _warmLine = "";
+    // The running warmup: the reader of its step, which of the steps that is, and the last line of the output.
+    private WarmOutput? _warm;
+    private IReadOnlyList<string> _warmSteps = [];
+    private int _warmStep;
+    private string _warmLine = "";
+    // A cancelled warmup of this fork is given time to stop by itself.
+    private bool _warmStopsItself;
     private bool _closeWhenIdle;
     // True while the launcher itself fills the fields.
     private bool _showing = true;
@@ -241,10 +244,14 @@ public partial class MainWindow : Window
             new ControlsDialog(_fork) { Owner = this }.ShowDialog();
     }
 
-    private void Cancel_Click(object sender, RoutedEventArgs e)
+    private void Cancel_Click(object sender, RoutedEventArgs e) => RequestCancel();
+
+    private void RequestCancel()
     {
         CancelButton.IsEnabled = false;
-        StatusText.Text = "Cancelling …";
+        StatusText.Text = _warmStopsItself
+            ? "Cancelling … the fork finishes the running pipelines and saves."
+            : "Cancelling …";
         _cancel?.Cancel();
     }
 
@@ -451,7 +458,8 @@ public partial class MainWindow : Window
             var commands = CliHelp.Commands(help);
             var warm = commands.Contains("warm") ? await Help(setup, "warm", "--help") : "";
             var translate = commands.Contains("translate") ? await Help(setup, "translate", "--help") : "";
-            var kind = WarmPlan.Detect(help, warm, translate);
+            var precompile = commands.Contains("precompile") ? await Help(setup, "precompile", "--help") : "";
+            var kind = WarmPlan.Detect(help, warm, translate, precompile);
             _log.Add($"Warmup kind according to the help of the program: {kind}");
             return kind;
         }
@@ -494,65 +502,66 @@ public partial class MainWindow : Window
         var commit = _head;
         // Taken now: it has to describe what this warmup runs with.
         var fingerprint = Fingerprint();
-        // Only this way reports counts the launcher can turn into a percentage.
-        var progress = kind == WarmKind.GameFiles
-            ? new WarmProgress(State.LastWarmTotal ?? WarmProgress.EstimatedTotal)
-            : null;
+        var grace = WarmPlan.CancelGrace(kind);
 
         _log.Open(Path.Combine(Home, "logs", "warm.log"));
         _log.Add($"Fork: {_fork.Name}, Commit {commit}");
         using var cancel = new CancellationTokenSource();
         _cancel = cancel;
-        _warm = progress;
-        _warmLine = "";
+        _warmSteps = steps.Select(arguments => arguments[0]).ToList();
+        _warmStopsItself = grace is not null;
         _clock.Restart();
         SetActivity(Activity.Warming);
-        WarmBar.IsIndeterminate = progress is null;
+        WarmBar.IsIndeterminate = true;
         try
         {
+            var verdicts = new List<WarmVerdict>();
             for (var i = 0; i < starts.Count; i++)
             {
-                _warmStep = starts.Count > 1 ? $"step {i + 1} of {starts.Count} ({steps[i][0]})" : steps[i][0];
+                // The lines go to the reader of the step that wrote them.
+                var reader = WarmPlan.Reader(kind, steps[i], State.LastWarmTotal);
+                _warmStep = i;
+                _warmLine = "";
+                _warm = reader;
                 _log.Add($"> {Path.GetFileName(setup.ExePath())} {string.Join(' ', steps[i])}");
                 var code = await ProcessRunner.RunAsync(starts[i], line =>
                 {
-                    progress?.Feed(line);
+                    reader.Feed(line);
                     if (!string.IsNullOrWhiteSpace(line))
                         _warmLine = line;
                     _log.Add(line);
-                }, cancel.Token);
+                }, cancel.Token, grace);
 
-                if (code != 0 || (progress is not null && progress.ResultLine is null))
+                var verdict = code == 0 ? reader.Verdict() : null;
+                if (verdict is not { Complete: true })
                 {
-                    _warm = null;
-                    SetActivity(Activity.Updating);
-                    WarmBar.IsIndeterminate = false;
-                    WarmBar.Value = progress?.Percent ?? 0;
-                    StatusText.Text = $"Warmup failed at {_warmStep} (exit code {code}). Details in logs\\warm.log.";
+                    EndWarmDisplay(reader.Status?.Percent ?? 0);
+                    var failed = $"Warmup failed at {WarmView.StepName(_warmSteps, i)} (exit code {code}).";
+                    // after exit code 0 the reader may know better than "failed" what happened
+                    var what = verdict is null
+                        ? string.Join(" ", new[] { failed, reader.FailureHint }.Where(part => part is not null))
+                        : verdict.Summary ?? failed;
+                    StatusText.Text = what + " Details in logs\\warm.log.";
                     return;
                 }
+                verdicts.Add(verdict);
             }
 
-            var result = progress?.ResultLine ?? _warmLine;
-            _warm = null;
-            SetActivity(Activity.Updating);
-            WarmBar.IsIndeterminate = false;
-            WarmBar.Value = 100;
+            var result = verdicts[^1].Summary ?? _warmLine;
+            EndWarmDisplay(100);
             StatusText.Text = $"Warmup finished after {Clock()}: " + Shorten(Regex.Replace(result, @"\s+", " "), 220);
             _settings = _settings.With(_fork.Id, State with
             {
                 LastWarmCommit = commit,
                 LastWarmFingerprint = fingerprint,
-                LastWarmTotal = progress?.ResultTotal,
+                LastWarmTotal = verdicts.Select(verdict => verdict.RememberTotal).FirstOrDefault(total => total is not null),
             });
             SaveSettings();
             ShowHint();
         }
         catch (OperationCanceledException)
         {
-            _warm = null;
-            SetActivity(Activity.Updating);
-            WarmBar.IsIndeterminate = false;
+            EndWarmDisplay(null);
             StatusText.Text = kind == WarmKind.GameFiles
                 ? "Warmup cancelled. The pipeline library was not saved, please repeat the warmup later."
                 : "Warmup cancelled, please repeat it later.";
@@ -560,8 +569,21 @@ public partial class MainWindow : Window
         finally
         {
             _warm = null;
+            _warmStopsItself = false;
             _cancel = null;
         }
+    }
+
+    /// <summary>The warmup is over: the bar stops, and nothing overwrites the message any more.</summary>
+    /// <param name="percent">Where the bar stays, or null to leave it.</param>
+    private void EndWarmDisplay(double? percent)
+    {
+        _warm = null;
+        _warmStopsItself = false;
+        SetActivity(Activity.Updating);
+        WarmBar.IsIndeterminate = false;
+        if (percent is { } value)
+            WarmBar.Value = value;
     }
 
     private async Task Play()
@@ -745,13 +767,11 @@ public partial class MainWindow : Window
         {
             if (_warm is { } warm)
             {
-                WarmBar.Value = warm.Percent;
-                var total = State.LastWarmTotal is null ? $"about {Number(warm.Total)} (estimated)" : Number(warm.Total);
-                StatusText.Text = $"{Number(warm.Count)} of {total} shaders · {warm.Percent:0}% · {Clock()}";
-            }
-            else
-            {
-                StatusText.Text = $"Warmup {_warmStep} · {Clock()}\n{Shorten(_warmLine, 110)}";
+                var view = WarmView.Of(warm.Status, _warmSteps, _warmStep, Clock(), _warmLine);
+                WarmBar.IsIndeterminate = view.Percent is null;
+                if (view.Percent is { } percent)
+                    WarmBar.Value = percent;
+                StatusText.Text = view.Text;
             }
         }
         else if (_activity == Activity.Playing)
@@ -766,9 +786,6 @@ public partial class MainWindow : Window
     }
 
     private static string Shorten(string text, int length) => text.Length <= length ? text : text[..length] + " …";
-
-    /// <summary>With English separators like the rest of the window, whatever Windows is set to.</summary>
-    private static string Number(long value) => value.ToString("N0", CultureInfo.InvariantCulture);
 
     private string Clock() => _clock.Elapsed.ToString(_clock.Elapsed.TotalHours >= 1 ? @"h\:mm\:ss" : @"m\:ss");
 
@@ -850,10 +867,10 @@ public partial class MainWindow : Window
                     : Volatile.Read(ref _downloadPercent) >= 0 ? "The update is still downloading. Cancel it and close?"
                     : "The checkout or build is still running. Cancel it and close?";
                 if (MessageBox.Show(this, question, Title, MessageBoxButton.YesNo, MessageBoxImage.Question,
-                        MessageBoxResult.No) == MessageBoxResult.Yes && _cancel is { } cancel)
+                        MessageBoxResult.No) == MessageBoxResult.Yes && _cancel is not null)
                 {
                     _closeWhenIdle = true;
-                    cancel.Cancel();
+                    RequestCancel();
                 }
                 break;
         }

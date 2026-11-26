@@ -280,3 +280,36 @@ public class PrecompileOutputTests
     [InlineData("precompile 99999999999999999999 3 0")]
     public void Other_lines_are_not_progress(string line) => Assert.Null(Fed(line).Status);
 }
+
+public class WarmViewTests
+{
+    [Fact]
+    public void Without_a_status_it_shows_the_step_and_the_last_line() =>
+        Assert.Equal(new WarmView("Warmup translate · 1:05\ncache  x", null),
+            WarmView.Of(null, ["translate"], 0, "1:05", "cache  x"));
+
+    [Fact]
+    public void With_several_steps_it_says_which_one() =>
+        Assert.Equal(new WarmView("Warmup step 2 of 2 (warm) · 0:03\n", null),
+            WarmView.Of(null, ["shaders", "warm"], 1, "0:03", ""));
+
+    [Fact]
+    public void A_long_last_line_is_cut() =>
+        Assert.Equal("Warmup warm · 0:01\n" + new string('x', 110) + " …",
+            WarmView.Of(null, ["warm"], 0, "0:01", new string('x', 200)).Text);
+
+    [Fact]
+    public void A_status_moves_the_bar() =>
+        Assert.Equal(new WarmView("Step 2 of 2 · 1,000 of 2,000 pipelines · 50% · 5:12", 50),
+            WarmView.Of(new WarmStatus(1000, 2000, 50, "pipelines"), ["shaders", "warm"], 1, "5:12", "x"));
+
+    [Fact]
+    public void A_count_without_a_total_leaves_the_bar_running() =>
+        Assert.Equal(new WarmView("3,000 shaders · 1:23", null),
+            WarmView.Of(new WarmStatus(3000, null, null, "shaders"), ["warm"], 0, "1:23", "x"));
+
+    [Fact]
+    public void AnyXboxX_reads_as_before() =>
+        Assert.Equal("2,000 of about 25,758 (estimated) shaders · 8% · 1:03",
+            WarmView.Of(new WarmStatus(2000, 25758, 7.76, "shaders", true), ["warm"], 0, "1:03", "").Text);
+}
