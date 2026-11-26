@@ -32,10 +32,39 @@ public class TuningTests
     [Theory]
     [InlineData("")]
     [InlineData(Always)]
-    [InlineData(Tuned)]
     [InlineData(Always + "\npub const TUNED: &[(&str, &str)] = &[\n];")]
     // An entry the launcher cannot read must not be dropped without a word.
     [InlineData(Always + "\npub const TUNED: &[(&str, &str)] = &[(\"VICTORY_RELAY\", \"2\"), (\"VICTORY_MODE\", DEFAULT_MODE)];")]
+    // The table is there, in a form this parser does not know: that is not the same as no table.
+    [InlineData("pub const ALWAYS: [(&str, &str); 1] = [(\"VICTORY_DISCORD\", \"0\")];\n" + Tuned)]
     public void Refuses_a_file_it_cannot_read_completely(string source) =>
         Assert.Throws<InvalidDataException>(() => Tuning.Parse(source));
+
+    // AnyXboxX 04a08f5 dropped ALWAYS. Shortened from its settings.rs at 37d4686.
+    private const string CombinedBase = """
+        /// `third_party/victory/scripts/play.ps1`'s settings without `-Safe`, in its order. Applied unless
+        /// `--no-tuned-settings`.
+        pub const TUNED: &[(&str, &str)] = &[
+            ("VICTORY_TEXTURE_NO_WAIT", "1"),
+            ("VICTORY_RELAY", "2"),
+            ("VICTORY_AMBIENT", "0.8"),
+        ];
+
+        /// What Linux (Proton) + AMD adds to [`TUNED`].
+        pub const LINUX_AMD_EXTRA: &[(&str, &str)] = &[
+            ("VICTORY_FETCH_CHECK", "1"),
+            ("VKD3D_CONFIG", "descriptor_heap"),
+        ];
+
+        pub const QUALITY: &[(&str, &str)] = &[
+            ("VICTORY_CARD_BUFFERS_MB", "1024"),
+        ];
+
+        pub const GAME_DIR: &str = "VICTORY_GAME_DIR";
+        """;
+
+    [Fact]
+    public void A_file_without_the_unconditional_table_gives_the_tuned_one() =>
+        Assert.Equal(["VICTORY_AMBIENT=0.8", "VICTORY_RELAY=2", "VICTORY_TEXTURE_NO_WAIT=1"],
+            Tuning.Parse(CombinedBase).Select(pair => $"{pair.Key}={pair.Value}").Order(StringComparer.Ordinal));
 }

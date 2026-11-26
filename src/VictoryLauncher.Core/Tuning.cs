@@ -4,7 +4,8 @@ namespace VictoryLauncher.Core;
 
 /// <summary>
 /// Reads the VICTORY_* settings from AnyXboxX's crates\anyxboxx\src\run\settings.rs, so that updates carry over.
-/// ALWAYS is applied first, then TUNED. The other tables there are opt in and stay out.
+/// Where there is an ALWAYS table (AnyXboxX until 04a08f5) it is applied first, then TUNED. The other tables there
+/// are opt in and stay out.
 /// </summary>
 public static partial class Tuning
 {
@@ -18,7 +19,9 @@ public static partial class Tuning
     {
         var code = Comment().Replace(source, "");
         var values = new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase);
-        foreach (var table in (string[])["ALWAYS", "TUNED"])
+        // Looked for loosely: an ALWAYS table in another form must not be taken for none.
+        string[] tables = Regex.IsMatch(code, @"\bconst\s+ALWAYS\b") ? ["ALWAYS", "TUNED"] : ["TUNED"];
+        foreach (var table in tables)
             foreach (Match entry in Entries(code, table))
                 values[entry.Groups["name"].Value] = entry.Groups["value"].Value;
         return values;

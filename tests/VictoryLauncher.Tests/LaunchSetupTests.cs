@@ -298,15 +298,21 @@ public class LaunchSetupTests : IDisposable
     public void Settings_of_a_fork_override_the_ones_from_its_checkout()
     {
         var setup = ValidSetup();
+        setup = setup with
+        {
+            Fork = setup.Fork with
+            {
+                Settings = new Dictionary<string, string> { ["VICTORY_CARD_BUFFERS_MB"] = "1024" },
+            },
+        };
         File.WriteAllText(Path.Combine(setup.RepoDir, "crates", "anyxboxx", "src", "run", "settings.rs"), """
-            pub const TUNED: &[(&str, &str)] = &[("VICTORY_CARD_BUFFERS_MB", "1536")];
-            pub const ALWAYS: &[(&str, &str)] = &[("VICTORY_DISCORD", "0")];
+            pub const TUNED: &[(&str, &str)] = &[("VICTORY_CARD_BUFFERS_MB", "1536"), ("VICTORY_RELAY", "2")];
             """);
 
         var settings = setup.ReadSettings();
 
         Assert.Equal("1024", settings["VICTORY_CARD_BUFFERS_MB"]);
-        Assert.Equal("0", settings["VICTORY_DISCORD"]);
+        Assert.Equal("2", settings["VICTORY_RELAY"]);
     }
 
     [Fact]
