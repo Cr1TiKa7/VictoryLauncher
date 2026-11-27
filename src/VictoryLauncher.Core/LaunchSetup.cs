@@ -206,6 +206,11 @@ public sealed record ForkSetup(ForkProfile Fork, string RepoDir, string CacheDir
             : new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase);
         foreach (var (name, value) in Fork.Settings)
             settings[name] = value;
+        if (!SeriesS)
+        {
+            foreach (var (name, value) in Fork.SeriesXSettings)
+                settings[name] = value;
+        }
         return settings;
     }
 

@@ -29,13 +29,14 @@ Games, Take-Two or Microsoft, nor with the authors of the forks.
 | [VItoriaBr](https://github.com/uiliannn/VItoriaBr) | yes (`warm`), without a percentage | its preset for 8 GB |
 | [victory-fork](https://github.com/fxceless/victory-fork) | no | `VICTORY_TEXTURE_BACK=1` |
 | [VIctory (DexNom)](https://github.com/DexNom/VIctory) | yes (`warm`), with a percentage | its experimental NVIDIA mode (ray tracing and FSR off), developed for AMD |
+| [VIctory-NVIDIA](https://github.com/trustno1-coder/VIctory-NVIDIA) | yes (`shaders`: a count, from the second time a percentage; the pipeline step has nothing to build yet) | from its `play.rs` (NVIDIA), 2560x1440, without DLSS and frame generation |
 
 The launcher reads the kind of warmup from the help of the built program. There is also
 "Own Git URL …" (`https://` only, a layout with `apps\victory` in the root or below `third_party\victory`, no special
 settings).
 
-Apart from AnyXboxX, the settings are a snapshot from 2026-11-26, meant for an NVIDIA card with 10 GB, as far as the
-fork allows it. The launcher cannot tell whether a fork shows a picture on your PC.
+Apart from AnyXboxX, the settings are a snapshot from 2026-11-26 (VIctory-NVIDIA: 2026-11-27), meant for an NVIDIA
+card with 10 GB, as far as the fork allows it. The launcher cannot tell whether a fork shows a picture on your PC.
 
 ## What the launcher does
 
@@ -58,25 +59,28 @@ fork allows it. The launcher cannot tell whether a fork shows a picture on your 
 
 The list next to **Start game** sets which console the game sees, for each fork on its own. **Series X** is what every
 built in fork does by itself and the default; the launcher then starts the game as before. With **Series S** it adds
-`--console series-s` to the start of the game. The warmup is not changed.
+`--console series-s` to the start of the game. The warmup is not changed. One exception: VIctory-NVIDIA gets its
+2560x1440 setting only as a Series X, its program does not start as a Series S with it.
 
-With Series S the launcher shows below what is known about the fork, taken from its own files on 2026-11-26 (in a
-small window the note may only be visible as the tooltip of the list). The authors disagree: some describe it as
-lighter and faster, one fork's table shows it slower than Series X with 1080p output, and a tester of another got a
-black picture. klbf-lab would need AMD's FidelityFX SDK for it, which the launcher does not pass on to the game. The
-game has not been started as a Series S with this launcher.
+With Series S the launcher shows below what is known about the fork, taken from its own files on 2026-11-26
+(VIctory-NVIDIA: 2026-11-27; in a small window the note may only be visible as the tooltip of the list). The authors
+disagree: some describe it as lighter and faster, one fork's table shows it slower than Series X with 1080p output,
+and a tester of another got a black picture. klbf-lab would need AMD's FidelityFX SDK for it, which the launcher does
+not pass on to the game. The game has not been started as a Series S with this launcher.
 
 ## Keyboard controls
 
 **CONTROLS** next to **Start game** shows which key stands in for which input of the controller with the chosen fork.
-The keys only count while the game window has the focus and no controller is connected.
+The keys only count while the game window has the focus and no controller is connected. With VIctory-NVIDIA they
+also count while a controller is connected.
 
 All built in forks except AnyXboxX use the same keys, by the letter on the key. AnyXboxX goes by the place of a key on
 the keyboard, so the launcher names its keys as your keyboard layout has them. On a German keyboard, for example, LT is
 the key labelled `Y` with AnyXboxX and the key labelled `Z` with the others.
 
-The tables are written into the launcher (a snapshot from 2026-11-26): a fork that changes its keys is shown wrong
-until the launcher follows. For an own Git URL the usual table is shown, not checked for that fork.
+The tables are written into the launcher (a snapshot from 2026-11-26, VIctory-NVIDIA: 2026-11-27): a fork that changes
+its keys is shown wrong until the launcher follows. For an own Git URL the usual table is shown, not checked for that
+fork.
 
 ## Updates of the launcher
 

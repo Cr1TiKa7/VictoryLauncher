@@ -13,14 +13,15 @@ public class ForkCatalogTests
     [InlineData("vitoriabr", "https://github.com/uiliannn/VItoriaBr")]
     [InlineData("victory-fork", "https://github.com/fxceless/victory-fork")]
     [InlineData("dexnom", "https://github.com/DexNom/VIctory")]
+    [InlineData("victory-nvidia", "https://github.com/trustno1-coder/VIctory-NVIDIA")]
     public void Has_the_chosen_forks_built_in(string id, string url) =>
         Assert.Equal(url, Assert.Single(ForkCatalog.BuiltIn, f => f.Id == id).Url);
 
     [Fact]
     public void Ids_are_unique_and_safe_as_folder_names()
     {
-        Assert.Equal(8, ForkCatalog.BuiltIn.Count);
-        Assert.Equal(8, ForkCatalog.BuiltIn.Select(f => f.Id).Distinct().Count());
+        Assert.Equal(9, ForkCatalog.BuiltIn.Count);
+        Assert.Equal(9, ForkCatalog.BuiltIn.Select(f => f.Id).Distinct().Count());
         Assert.All(ForkCatalog.BuiltIn, f => Assert.Matches("^[a-z0-9-]+$", f.Id));
         Assert.All(ForkCatalog.BuiltIn, f => Assert.Equal(f.Url, GitUrl.Parse(f.Url).Url));
     }
@@ -65,6 +66,29 @@ public class ForkCatalogTests
     }
 
     [Fact]
+    public void The_nvidia_fork_gets_the_settings_of_its_own_start_without_dlss_and_without_recording()
+    {
+        var fork = ForkCatalog.Find("victory-nvidia", []);
+
+        Assert.Equal(
+            [
+                "AMBIENT=0.8", "AMBIENT_AIR=1.5", "AMBIENT_SPECULAR=1", "CARD_AWAKE=1", "CARD_BUFFERS_MIN_KB=64",
+                "CARD_REHASH_RUNS=1", "CARD_STEPS=2", "EARLY_DEPTH=1", "FRAME_INTERVAL_US=1000", "HEAP_SYNC_AT_SUBMIT=1",
+                "HEAP_SYNC_FIRST=1", "INDIRECT_BATCH=2", "INDIRECT_WINDOW=1", "JOIN_COPIES=1", "JOIN_PARTS=8",
+                "LEAVE_OUT=02384a60fda6f2d0,731a39171b568298", "LEVELS_ON_DEMAND=0", "MAP_THREADS=1", "POOL_SMALL=0",
+                "PRELUDE_UPLOADS=1", "QUEUE_HOST_TEXTURES=0", "RELAY=2", "RELAY_COPY=1", "RIPE_BLOCKS=0", "SHOW_AFTER=1",
+                "SHOW_NEW_LATER=1", "SOFT_VIEWS=copies", "SPANS_QUICK=1", "SYNC_FINE=1", "SYNC_IN_PLACE=1",
+                "TABLED_REREAD=1", "TEXTURE_CATCHUP=0", "TEXTURE_NO_WAIT=1", "TEXTURE_POOL=1", "TEXTURE_STAGE_MS=16",
+                "THIN=1", "UPLOAD_AHEAD=1", "WC_NO_BACK=1", "WC_NO_BACK_MIN_KB=1024", "WIDE_BACK=1",
+            ],
+            fork.Settings.Select(pair => $"{pair.Key["VICTORY_".Length..]}={pair.Value}").Order(StringComparer.Ordinal));
+        Assert.Equal(["VICTORY_NATIVE_1440P=1"], fork.SeriesXSettings.Select(pair => $"{pair.Key}={pair.Value}"));
+        Assert.Contains("DLSS", fork.Note);
+        Assert.Contains("cannot save", fork.Note);
+        Assert.Same(fork, Assert.Single(ForkCatalog.BuiltIn, f => f.SeriesXSettings.Count > 0));
+    }
+
+    [Fact]
     public void Only_anyxboxx_reads_its_settings_from_the_checkout_and_shares_the_standard_save_folder()
     {
         var shared = Assert.Single(ForkCatalog.BuiltIn, f => !f.OwnDataDir);
@@ -80,7 +104,7 @@ public class ForkCatalogTests
 
     [Fact]
     public void Settings_never_name_the_folders_the_launcher_sets() =>
-        Assert.All(ForkCatalog.BuiltIn.SelectMany(f => f.Settings.Keys), name =>
+        Assert.All(ForkCatalog.BuiltIn.SelectMany(f => f.Settings.Keys.Concat(f.SeriesXSettings.Keys)), name =>
         {
             Assert.StartsWith("VICTORY_", name);
             Assert.DoesNotContain(name, new[] { "VICTORY_GAME_DIR", "VICTORY_CACHE_DIR", "VICTORY_DATA_DIR", "VICTORY_CONFIG" });
@@ -114,7 +138,7 @@ public class ForkCatalogTests
     {
         var all = ForkCatalog.All(["https://github.com/me/mine"]);
 
-        Assert.Equal(9, all.Count);
+        Assert.Equal(10, all.Count);
         Assert.Equal("anyxboxx", all[0].Id);
         Assert.True(all[^1].IsCustom);
     }

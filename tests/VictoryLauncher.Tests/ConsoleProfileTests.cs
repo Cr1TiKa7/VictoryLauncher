@@ -36,6 +36,18 @@ public class ConsoleProfileTests : IDisposable
     }
 
     [Fact]
+    public void The_1440p_output_of_the_nvidia_fork_only_goes_to_a_series_x()
+    {
+        // on a Series S its program stops with "1440p output needs the Series X profile"
+        var asSeriesX = new LauncherSettings().Setup(Fork("victory-nvidia")).ReadSettings();
+        var asSeriesS = OnSeriesS("victory-nvidia").Setup(Fork("victory-nvidia")).ReadSettings();
+
+        Assert.Equal("1", asSeriesX["VICTORY_NATIVE_1440P"]);
+        Assert.False(asSeriesS.ContainsKey("VICTORY_NATIVE_1440P"));
+        Assert.Equal(asSeriesX.Count - 1, asSeriesS.Count);
+    }
+
+    [Fact]
     public void The_choice_is_kept_in_the_settings_file()
     {
         var path = Path.Combine(_root, "settings.json");
@@ -65,6 +77,7 @@ public class ConsoleProfileTests : IDisposable
     [InlineData("vitoriabr", "says nothing about Series S")]
     [InlineData("victory-fork", "black picture")]
     [InlineData("dexnom", "all use Series X")]
+    [InlineData("victory-nvidia", "1280x720")]
     public void Every_built_in_fork_says_what_is_known_about_its_series_s(string id, string part) =>
         Assert.Contains(part, Fork(id).SeriesSNote);
 

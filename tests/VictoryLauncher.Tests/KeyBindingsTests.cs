@@ -101,6 +101,18 @@ public class KeyBindingsTests
     }
 
     [Fact]
+    public void The_nvidia_fork_takes_the_keys_next_to_a_controller()
+    {
+        var notes = NotesOf("victory-nvidia");
+
+        Assert.Contains("also while a controller is connected", notes);
+        Assert.DoesNotContain("no controller", notes);
+        Assert.Contains("F1", notes);
+        Assert.Contains("F3", notes);
+        Assert.Contains("no controller is connected", NotesOf("klbf-lab"));
+    }
+
+    [Fact]
     public void Dexnom_names_the_dualsense_too()
     {
         Assert.Contains("DualSense", NotesOf("dexnom"));
