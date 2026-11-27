@@ -201,6 +201,9 @@
                             <Setter TargetName="Tick" Property="Visibility" Value="Visible" />
                             <Setter TargetName="Box" Property="Background" Value="{StaticResource Sunset}" />
                         </Trigger>
+                        <Trigger Property="IsEnabled" Value="False">
+                            <Setter TargetName="Row" Property="Opacity" Value="0.45" />
+                        </Trigger>
                     </ControlTemplate.Triggers>
                 </ControlTemplate>
             </Setter.Value>

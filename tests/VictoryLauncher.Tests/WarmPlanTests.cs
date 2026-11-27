@@ -64,7 +64,7 @@ public class WarmPlanTests
         var shaders = Path.Combine(@"G:\game", "shaders.rpf");
 
         Assert.Equal([["warm", @"G:\game"]], WarmPlan.Steps(WarmKind.GameFolder, @"G:\game"));
-        Assert.Equal([["shaders", shaders], ["warm", "--used"]], WarmPlan.Steps(WarmKind.ShadersThenPipelines, @"G:\game"));
+        Assert.Equal([["shaders", shaders], ["warm"]], WarmPlan.Steps(WarmKind.ShadersThenPipelines, @"G:\game"));
         Assert.Equal([["translate", "--cache", "--pipelines", "--jobs", "8", shaders]],
             WarmPlan.Steps(WarmKind.ShaderPack, @"G:\game"));
         Assert.Empty(WarmPlan.Steps(WarmKind.None, @"G:\game"));
@@ -192,7 +192,7 @@ public class WarmPlanTests
     [Fact]
     public void The_texts_say_what_the_warmup_cannot_do()
     {
-        Assert.Contains("does not switch on yet", WarmPlan.About(WarmKind.ShadersThenPipelines));
+        Assert.Contains("does not switch on", WarmPlan.About(WarmKind.ShadersThenPipelines));
         Assert.Contains("Play once first", WarmPlan.About(WarmKind.Precompile));
     }
 
@@ -242,7 +242,7 @@ public class WarmPlanTests
 
             Assert.Equal(
                 [["shaders", In("anim.rpf"), In("shaders.rpf"), In("game_scarlett_master.exe"),
-                    In("XboxBvhBuilder.dll"), In("amd_fidelityfx_upscaler_xbox.dll")], ["warm", "--used"]], steps);
+                    In("XboxBvhBuilder.dll"), In("amd_fidelityfx_upscaler_xbox.dll")], ["warm"]], steps);
         }
         finally
         {

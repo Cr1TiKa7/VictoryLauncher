@@ -21,10 +21,10 @@ Games, Take-Two or Microsoft, nor with the authors of the forks.
 
 | Fork | Warmup | Settings |
 |------|--------|----------|
-| [AnyXboxX](https://github.com/LooperSalty/AnyXboxX) | yes (`shaders` with every archive and binary of the game: a count, from the second time a percentage; the pipeline step has nothing to build yet) | from `crates\anyxboxx\src\run\settings.rs`, they follow the updates |
+| [AnyXboxX](https://github.com/LooperSalty/AnyXboxX) | yes (`shaders` with every archive and binary of the game, of which the program skips files over 2 GB: a count, from the second time a percentage; then `warm` for the [recorded pipelines](#recorded-pipelines)) | from `crates\anyxboxx\src\run\settings.rs`, they follow the updates |
 | [klbf-lab](https://github.com/PastiiJay/klbf-lab) | yes (`translate`), with a percentage | from the README of the fork, without its Series S setup |
-| [Vice-Tay](https://github.com/TaynanGT/Vice-Tay) | yes (`shaders`: a count, from the second time a percentage; the pipeline step has nothing to build yet) | from its `play.ps1` (NVIDIA) |
-| [VIctory-7900XTX](https://github.com/avatarmanz/VIctory-7900XTX) | yes (`shaders`: a count, from the second time a percentage; the pipeline step has nothing to build yet) | from its `play.ps1`, tuned for AMD |
+| [Vice-Tay](https://github.com/TaynanGT/Vice-Tay) | yes (`shaders`: a count, from the second time a percentage; then `warm` for the [recorded pipelines](#recorded-pipelines)) | from its `play.ps1` (NVIDIA) |
+| [VIctory-7900XTX](https://github.com/avatarmanz/VIctory-7900XTX) | yes (`shaders`: a count, from the second time a percentage; then `warm` for the [recorded pipelines](#recorded-pipelines)) | from its `play.ps1`, tuned for AMD |
 | [kelvaroq](https://github.com/fablinoo/kelvaroq) | yes (`precompile`): the pipelines of earlier game runs, with a percentage | the tier for 10 GB |
 | [VItoriaBr](https://github.com/uiliannn/VItoriaBr) | yes (`warm`), without a percentage | its preset for 8 GB |
 | [victory-fork](https://github.com/fxceless/victory-fork) | no | `VICTORY_TEXTURE_BACK=1` |
@@ -37,6 +37,26 @@ settings).
 Apart from AnyXboxX, the settings are a snapshot from 2026-11-26, meant for an NVIDIA card with 10 GB, as far as the
 fork allows it. The launcher cannot tell whether a fork shows a picture on your PC.
 
+## Recorded pipelines
+
+For AnyXboxX, Vice-Tay and VIctory-7900XTX the launcher adds one setting of its own, `VICTORY_PIPELINE_BOOK=1`. The
+forks do not switch it on themselves.
+
+- **Play first:** While the game runs, it writes down every pipeline it creates, in `pipelines\known-pipelines.bin` and
+  `pipelines\known-shaders.bin` in the cache folder. The second file holds shaders of the game itself, so do not share
+  it. The launcher never copies these files anywhere.
+- **Then warm up:** The pipeline step builds everything that was recorded, what the game has drawn with first, and
+  skips what the fork has built before. A cancelled warmup goes on where it stopped.
+- **Rebuild all pipelines** also builds what was built before. The fork remembers what it built, not whether the
+  graphics driver still has it, so use it for example after the shader cache of the driver was cleared. A cancelled
+  rebuild starts over.
+
+**It is not shown that this helps.** It was measured once, with AnyXboxX on one PC with an RTX 3080: 3,000 pipelines
+that had never been built took 75 seconds, and 2,418 pipelines the game had drawn with took 4 minutes. Building those
+a second time took just as long, and no change was seen in the shader cache of the graphics driver. With 83,561
+recorded pipelines, building them all takes more than half an hour by that measure. Whether the game stutters less has
+not been measured.
+
 ## What the launcher does
 
 - **Third party code:** Before it checks out a fork for the first time, it asks once per address (AnyXboxX is
@@ -48,7 +68,7 @@ fork allows it. The launcher cannot tell whether a fork shows a picture on your 
 - **Program check:** Before the game starts, it lists programs that use video memory or CPU. Nothing is ticked in
   advance. Ticked programs are closed normally; whatever keeps running is only force closed after a second question.
 - **Warmup progress:** It is read from the lines the fork prints. In the running launcher it has only been tried with
-  AnyXboxX (37d4686), whose pipeline step had nothing to build there. For the other forks it was written from their
+  AnyXboxX (37d4686), at a time when nothing was recorded for its pipeline step. For the other forks it was written from their
   sources, for Vice-Tay also checked against saved logs. If the lines do not match, you see the last line of the output
   instead (kelvaroq reports the warmup as incomplete then).
 - **Driver cache:** It does not manage the shader cache of the graphics driver. What the pipeline step of AnyXboxX,

@@ -72,8 +72,8 @@ public class ForkCatalogTests
         Assert.Equal(@"crates\anyxboxx\src\run\settings.rs",
             Assert.Single(ForkCatalog.BuiltIn, f => f.TuningFile is not null).TuningFile);
         Assert.Equal("third_party\\victory", shared.RuntimeDir);
-        // its settings are the ones of its table and nothing else
-        Assert.Empty(shared.Settings);
+        // its settings are the ones of its table, the launcher only adds the pipeline record
+        Assert.Equal("VICTORY_PIPELINE_BOOK", Assert.Single(shared.Settings).Key);
         // its shaders are not all in the shader pack
         Assert.Same(shared, Assert.Single(ForkCatalog.BuiltIn, f => f.WarmsEveryGameFile));
     }
