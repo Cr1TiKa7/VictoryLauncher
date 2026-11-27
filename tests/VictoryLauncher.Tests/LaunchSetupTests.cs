@@ -315,6 +315,48 @@ public class LaunchSetupTests : IDisposable
         Assert.Equal("2", settings["VICTORY_RELAY"]);
     }
 
+    private ForkSetup AnyXboxXWithItsTuned()
+    {
+        var setup = ValidSetup();
+        File.WriteAllText(Path.Combine(setup.RepoDir, "crates", "anyxboxx", "src", "run", "settings.rs"), """
+            pub const TUNED: &[(&str, &str)] = &[("VICTORY_RELAY", "2")];
+            """);
+        return setup;
+    }
+
+    [Fact]
+    public void AnyXboxX_puts_out_1080p_on_a_series_x_as_its_own_launcher_does_by_default()
+    {
+        // crates/anyxboxx-launcher/src/options.rs: Resolution::P1080 is the default and sets both
+        var settings = AnyXboxXWithItsTuned().ReadSettings();
+
+        Assert.Equal("1920x1080", settings["VICTORY_DISPLAY_MODE"]);
+        Assert.Equal("1920x1080", settings["VICTORY_OUTPUT"]);
+        Assert.Equal("2", settings["VICTORY_RELAY"]);
+    }
+
+    [Fact]
+    public void AnyXboxX_keeps_its_own_picture_size_on_a_series_s()
+    {
+        // its own launcher has no Series S, so 1080p was never tried with it there
+        var settings = (AnyXboxXWithItsTuned() with { SeriesS = true }).ReadSettings();
+
+        Assert.False(settings.ContainsKey("VICTORY_DISPLAY_MODE"));
+        Assert.False(settings.ContainsKey("VICTORY_OUTPUT"));
+        Assert.Equal("2", settings["VICTORY_RELAY"]);
+    }
+
+    [Fact]
+    public void No_fork_asks_the_title_for_another_output_size_by_its_fixed_settings()
+    {
+        // the only way is the choice, see OutputSizeTests
+        var asking = ForkCatalog.BuiltIn.Append(ForkCatalog.Custom(Mine))
+            .Where(fork => fork.Settings.ContainsKey("VICTORY_OUTPUT") || fork.SeriesXSettings.ContainsKey("VICTORY_OUTPUT"))
+            .Select(fork => fork.Id);
+
+        Assert.Empty(asking);
+    }
+
     [Fact]
     public void A_fork_without_a_tuning_file_uses_its_fixed_settings()
     {

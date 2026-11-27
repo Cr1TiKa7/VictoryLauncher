@@ -23,6 +23,9 @@ public sealed record ForkState
 
     /// <summary>The game sees a Series S instead of a Series X.</summary>
     public bool SeriesS { get; init; }
+
+    /// <summary>The id of the chosen <see cref="Core.OutputSize"/>; null: the default.</summary>
+    public string? OutputSize { get; init; }
 }
 
 public sealed record LauncherSettings
@@ -75,7 +78,8 @@ public sealed record LauncherSettings
             : Path.Combine(DataRoot, "forks", fork.Id));
         var cache = state.CacheDir ?? Path.Combine(DataRoot, "cache-" + fork.Id);
         var data = fork.OwnDataDir ? Path.Combine(DataRoot, "data-" + fork.Id) : null;
-        return new(fork, repo, cache, data, GameDir) { SeriesS = state.SeriesS };
+        return new(fork, repo, cache, data, GameDir)
+            { SeriesS = state.SeriesS, ChosenOutputSize = state.OutputSize };
     }
 
     // Somebody else may hold the file for a moment, a virus scanner for example.
@@ -178,6 +182,12 @@ public sealed record ForkSetup(ForkProfile Fork, string RepoDir, string CacheDir
     /// <summary>The game sees a Series S instead of a Series X.</summary>
     public bool SeriesS { get; init; }
 
+    /// <summary>The id of the chosen output size, as it is in the settings file.</summary>
+    public string? ChosenOutputSize { get; init; }
+
+    /// <summary>The output size of the next run, or null where the fork or the console offers none.</summary>
+    public OutputSize? Output => Fork.ChoosesOutputSize && !SeriesS ? OutputSize.Of(ChosenOutputSize) : null;
+
     /// <summary>
     /// How the game is started. Series X is the runtime's own default, so only Series S is named.
     /// </summary>
@@ -200,6 +210,23 @@ public sealed record ForkSetup(ForkProfile Fork, string RepoDir, string CacheDir
 
     /// <summary>The VICTORY_* variables of this fork. Read after an update: a tuning file is part of the checkout.</summary>
     public IReadOnlyDictionary<string, string> ReadSettings()
+    {
+        var settings = BaseSettings();
+        if (Output is { } output && output.Id != OutputSize.TitlesOwn)
+        {
+            foreach (var name in OutputSize.Variables)
+                settings[name] = output.Id;
+        }
+        return settings;
+    }
+
+    /// <summary>
+    /// What the warmup hint compares: everything but a chosen output size. The translated shaders do not depend on
+    /// it, so changing it asks for no new warmup.
+    /// </summary>
+    public IReadOnlyDictionary<string, string> WarmCacheSettings() => BaseSettings();
+
+    private Dictionary<string, string> BaseSettings()
     {
         var settings = TuningFile() is { } file
             ? new Dictionary<string, string>(Tuning.Parse(File.ReadAllText(file)), StringComparer.OrdinalIgnoreCase)

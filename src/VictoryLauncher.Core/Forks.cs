@@ -55,6 +55,9 @@ public sealed record ForkProfile
     /// <summary>Its keyboard pad stays in use beside a connected controller.</summary>
     public bool KeysNextToController { get; init; }
 
+    /// <summary>The window offers the size the game puts out, on a Series X.</summary>
+    public bool ChoosesOutputSize { get; init; }
+
     /// <summary>A note shown with the fork.</summary>
     public string Note { get; init; } = "";
 
@@ -81,10 +84,12 @@ public static partial class ForkCatalog
             Id = DefaultId, Name = "AnyXboxX (LooperSalty)", Url = "https://github.com/LooperSalty/AnyXboxX",
             RuntimeDir = @"third_party\victory", TuningFile = @"crates\anyxboxx\src\run\settings.rs",
             WarmsEveryGameFile = true, OwnDataDir = false, Keys = KeyScheme.ByPosition,
+            // Its own launcher has this choice too. That one has no Series S, so a Series S is left as it was.
+            ChoosesOutputSize = true,
             Note = "Settings from crates\\anyxboxx\\src\\run\\settings.rs (the values of \"anyxboxx run\"), " +
                    "they follow the updates.",
             SeriesSNote = "Its runtime README: about 5 ms a frame faster, a softer picture (measured on AMD). " +
-                          "The launcher of AnyXboxX does not offer Series S.",
+                          "The launcher of AnyXboxX does not offer Series S, so no output size is set then.",
         },
         new()
         {

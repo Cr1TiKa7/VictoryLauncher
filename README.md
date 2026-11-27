@@ -21,7 +21,7 @@ Games, Take-Two or Microsoft, nor with the authors of the forks.
 
 | Fork | Warmup | Settings |
 |------|--------|----------|
-| [AnyXboxX](https://github.com/LooperSalty/AnyXboxX) | yes (`shaders` with every archive and binary of the game: a count, from the second time a percentage; the pipeline step has nothing to build yet) | from `crates\anyxboxx\src\run\settings.rs`, they follow the updates |
+| [AnyXboxX](https://github.com/LooperSalty/AnyXboxX) | yes (`shaders` with every archive and binary of the game: a count, from the second time a percentage; the pipeline step has nothing to build yet) | from `crates\anyxboxx\src\run\settings.rs`, they follow the updates; on a Series X also the output size [chosen in the window](#output-size-anyxboxx) |
 | [klbf-lab](https://github.com/PastiiJay/klbf-lab) | yes (`translate`), with a percentage | from the README of the fork, without its Series S setup |
 | [Vice-Tay](https://github.com/TaynanGT/Vice-Tay) | yes (`shaders`: a count, from the second time a percentage; the pipeline step has nothing to build yet) | from its `play.ps1` (NVIDIA) |
 | [VIctory-7900XTX](https://github.com/avatarmanz/VIctory-7900XTX) | yes (`shaders`: a count, from the second time a percentage; the pipeline step has nothing to build yet) | from its `play.ps1`, tuned for AMD |
@@ -36,7 +36,9 @@ The launcher reads the kind of warmup from the help of the built program. There 
 settings).
 
 Apart from AnyXboxX, the settings are a snapshot from 2026-11-26 (VIctory-NVIDIA: 2026-11-27), meant for an NVIDIA
-card with 10 GB, as far as the fork allows it. The launcher cannot tell whether a fork shows a picture on your PC.
+card with 10 GB, as far as the fork allows it. The output sizes offered for AnyXboxX and their default do not follow
+the updates either: they are taken from its own launcher on 2026-11-27. The launcher cannot tell whether a fork shows
+a picture on your PC.
 
 ## What the launcher does
 
@@ -55,12 +57,23 @@ card with 10 GB, as far as the fork allows it. The launcher cannot tell whether 
 - **Driver cache:** It does not manage the shader cache of the graphics driver. What the pipeline step of AnyXboxX,
   Vice-Tay and VIctory-7900XTX builds is only kept there.
 
+## Output size (AnyXboxX)
+
+With AnyXboxX a second list next to **Start game** sets the size the game is asked to put out: 1280x720, **1920x1080**
+(the default, as in the launcher of AnyXboxX), 2560x1440, or the title's own, which is 3840x2160 with the settings a
+Series X wrote and is what the launcher did before there was this list. A smaller size looks softer and should run
+faster; the author of AnyXboxX reports about 20 fps at 3840x2160 against 24 to 30 at 1920x1080 on an RTX 4070 SUPER,
+which this launcher has not measured. AnyXboxX changes two places in the title's code for it when the game starts and
+leaves them alone if their bytes are not the expected ones. Changing the size asks for no new warmup. The game has not
+been started with this list yet.
+
 ## Console: Series X or Series S
 
 The list next to **Start game** sets which console the game sees, for each fork on its own. **Series X** is what every
-built in fork does by itself and the default; the launcher then starts the game as before. With **Series S** it adds
-`--console series-s` to the start of the game. The warmup is not changed. One exception: VIctory-NVIDIA gets its
-2560x1440 setting only as a Series X, its program does not start as a Series S with it.
+built in fork does by itself and the default; the launcher then names no console. With **Series S** it adds
+`--console series-s` to the start of the game. The warmup is not changed. Two things are only set for a Series X: the
+2560x1440 setting of VIctory-NVIDIA, whose program does not start as a Series S with it, and the output size of
+AnyXboxX, whose own launcher has no Series S.
 
 With Series S the launcher shows below what is known about the fork, taken from its own files on 2026-11-26
 (VIctory-NVIDIA: 2026-11-27; in a small window the note may only be visible as the tooltip of the list). The authors
