@@ -53,7 +53,9 @@ public static class KeyBindings
         var pad = fork.Id == "dexnom" ? "controller (also no DualSense on a cable)" : "controller";
         var notes = new List<string>
         {
-            $"The keys only count while the game window has the focus and no {pad} is connected.",
+            fork.KeysNextToController
+                ? "The keys only count while the game window has the focus, also while a controller is connected."
+                : $"The keys only count while the game window has the focus and no {pad} is connected.",
         };
         if (fork.Keys == KeyScheme.ByPosition)
         {
@@ -62,6 +64,8 @@ public static class KeyBindings
         }
         if (fork.Id == "vice-tay")
             notes.Add("F11 or Alt+Enter switches between full screen and a window.");
+        if (fork.Id == "victory-nvidia")
+            notes.Add("F1 opens its settings menu, F3 the stats panel.");
         if (fork.IsCustom)
             notes.Add("Own URL: this is the usual table of the VIctory runtime, not checked for this fork.");
         return notes;

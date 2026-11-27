@@ -52,6 +52,8 @@ public partial class MainWindow : Window
         InitializeComponent();
         Title = WindowName;
         _fork = _settings.Selected();
+        foreach (var size in OutputSize.Choices)
+            OutputBox.Items.Add(new ComboBoxItem { Content = size.Label });
         ListForks();
         ShowFork();
         // From here on a change in the list or in a field comes from the user.
@@ -146,6 +148,8 @@ public partial class MainWindow : Window
 
         ConsoleBox.SelectedIndex = !typing && State.SeriesS ? 1 : 0;
         ShowConsoleNote();
+        OutputBox.SelectedIndex = OutputSize.Choices.ToList().IndexOf(OutputSize.Of(State.OutputSize));
+        ShowOutputSize();
         GameBox.Text = _settings.GameDir;
         CacheBox.Text = typing ? "" : setup.CacheDir;
         RepoBox.Text = typing ? "" : setup.RepoDir;
@@ -167,6 +171,25 @@ public partial class MainWindow : Window
         _settings = _settings.With(_fork.Id, State with { SeriesS = ConsoleBox.SelectedIndex == 1 });
         SaveSettings();
         ShowConsoleNote();
+        ShowOutputSize();
+        SetActivity(_activity);
+    }
+
+    private void Output_Changed(object sender, SelectionChangedEventArgs e)
+    {
+        if (_showing || OutputBox.SelectedIndex < 0)
+            return;
+        _settings = _settings.With(_fork.Id, State with { OutputSize = OutputSize.Choices[OutputBox.SelectedIndex].Id });
+        SaveSettings();
+    }
+
+    /// <summary>The list is only there for a fork that offers it. Whether it can be used, SetActivity says.</summary>
+    private void ShowOutputSize()
+    {
+        OutputBox.Visibility = !TypingUrl && _fork.ChoosesOutputSize ? Visibility.Visible : Visibility.Collapsed;
+        OutputBox.ToolTip = State.SeriesS
+            ? "As a Series S no output size is set."
+            : "The size the game puts out. A smaller one looks softer and should run faster.";
     }
 
     /// <summary>Series X is what every fork does by itself; only Series S comes with something to know.</summary>
@@ -620,7 +643,8 @@ public partial class MainWindow : Window
         var start = Game(setup, setup.PlayArguments());
         SaveSettings();
         _log.Open(Path.Combine(Home, "logs", "game.log"));
-        _log.Add($"Fork: {_fork.Name}, Commit {_head}, Console: {(setup.SeriesS ? "Series S" : "Series X")}");
+        _log.Add($"Fork: {_fork.Name}, Commit {_head}, Console: {(setup.SeriesS ? "Series S" : "Series X")}" +
+                 (setup.Output is { } output ? $", Output: {output.Label}" : ""));
         _clock.Restart();
         SetActivity(Activity.Playing);
         var code = await ProcessRunner.RunAsync(start, _log.Add, CancellationToken.None);
@@ -762,6 +786,7 @@ public partial class MainWindow : Window
         foreach (var control in new Control[] { CheckButton, PlayButton, ConsoleBox, CacheBox, RepoBox, CacheBrowse, RepoBrowse })
             control.IsEnabled = forkChosen;
         WarmButton.IsEnabled = forkChosen && CheckedWarm() != WarmKind.None;
+        OutputBox.IsEnabled = forkChosen && !State.SeriesS;
         ControlsButton.IsEnabled = !TypingUrl;
         CancelButton.IsEnabled = activity == Activity.Warming;
         PlayButton.Content = activity == Activity.Playing ? "GAME RUNNING …" : "START GAME";
@@ -832,7 +857,8 @@ public partial class MainWindow : Window
             return null;
         try
         {
-            return WarmState.Fingerprint(sourceId, setup.ReadSettings(), setup.GameDir, setup.CacheDir, setup.DataDir);
+            return WarmState.Fingerprint(sourceId, setup.WarmCacheSettings(), setup.GameDir, setup.CacheDir,
+                setup.DataDir);
         }
         // The hint must not get in the way; warmup and game report an unreadable script themselves.
         catch (Exception e) when (e is IOException or UnauthorizedAccessException or InvalidDataException or ArgumentException)

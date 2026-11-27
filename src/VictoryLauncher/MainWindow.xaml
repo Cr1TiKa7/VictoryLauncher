@@ -91,6 +91,9 @@
                     <ComboBoxItem Content="Series X (default)" />
                     <ComboBoxItem Content="Series S" />
                 </ComboBox>
+                <!-- only there for a fork that offers it; the window code fills the list -->
+                <ComboBox DockPanel.Dock="Right" x:Name="OutputBox" Width="170" Height="54" Margin="12,0,0,0"
+                          Visibility="Collapsed" ToolTipService.ShowOnDisabled="True" SelectionChanged="Output_Changed" />
                 <Button x:Name="PlayButton" Content="START GAME" Style="{StaticResource PlayButtonStyle}" Click="Play_Click" />
             </DockPanel>
 

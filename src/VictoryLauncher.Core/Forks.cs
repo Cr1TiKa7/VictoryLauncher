@@ -40,6 +40,9 @@ public sealed record ForkProfile
     /// <summary>VICTORY_* variables for warmup and game. They win over the tuning file.</summary>
     public IReadOnlyDictionary<string, string> Settings { get; init; } = new Dictionary<string, string>();
 
+    /// <summary>VICTORY_* variables that only go to a Series X; as a Series S the program does not take them.</summary>
+    public IReadOnlyDictionary<string, string> SeriesXSettings { get; init; } = new Dictionary<string, string>();
+
     /// <summary>False: saves stay in the runtime's standard folder.</summary>
     public bool OwnDataDir { get; init; } = true;
 
@@ -48,6 +51,12 @@ public sealed record ForkProfile
 
     /// <summary>How its keyboard pad finds the letter keys.</summary>
     public KeyScheme Keys { get; init; } = KeyScheme.Standard;
+
+    /// <summary>Its keyboard pad stays in use beside a connected controller.</summary>
+    public bool KeysNextToController { get; init; }
+
+    /// <summary>The window offers the size the game puts out, on a Series X.</summary>
+    public bool ChoosesOutputSize { get; init; }
 
     /// <summary>A note shown with the fork.</summary>
     public string Note { get; init; } = "";
@@ -59,8 +68,8 @@ public sealed record ForkProfile
 }
 
 /// <summary>
-/// The built in forks and the profile for an own URL. Their settings are a snapshot of 2026-11-26, taken from each
-/// fork's start script or README and fitted to a graphics card with 10 GB.
+/// The built in forks and the profile for an own URL. Their settings are a snapshot of 2026-11-26 (VIctory-NVIDIA:
+/// 2026-11-27), taken from each fork's start script or README and fitted to a graphics card with 10 GB.
 /// </summary>
 public static partial class ForkCatalog
 {
@@ -75,10 +84,12 @@ public static partial class ForkCatalog
             Id = DefaultId, Name = "AnyXboxX (LooperSalty)", Url = "https://github.com/LooperSalty/AnyXboxX",
             RuntimeDir = @"third_party\victory", TuningFile = @"crates\anyxboxx\src\run\settings.rs",
             WarmsEveryGameFile = true, OwnDataDir = false, Keys = KeyScheme.ByPosition,
+            // Its own launcher has this choice too. That one has no Series S, so a Series S is left as it was.
+            ChoosesOutputSize = true,
             Note = "Settings from crates\\anyxboxx\\src\\run\\settings.rs (the values of \"anyxboxx run\"), " +
                    "they follow the updates.",
             SeriesSNote = "Its runtime README: about 5 ms a frame faster, a softer picture (measured on AMD). " +
-                          "The launcher of AnyXboxX does not offer Series S.",
+                          "The launcher of AnyXboxX does not offer Series S, so no output size is set then.",
         },
         new()
         {
@@ -168,6 +179,29 @@ public static partial class ForkCatalog
                    "NVIDIA gameplay is untested by the author. The build downloads format tables from " +
                    "Marvisak/VIctory and checks their SHA-256.",
             SeriesSNote = "The fork knows the switch, but the starters of its author all use Series X.",
+        },
+        new()
+        {
+            Id = "victory-nvidia", Name = "VIctory-NVIDIA (trustno1-coder)",
+            Url = "https://github.com/trustno1-coder/VIctory-NVIDIA", KeysNextToController = true,
+            // apps\victory\src\play.rs as of c437b05: its table and "no frame rate cap". Left out: DLSS and frame
+            // generation (they need NVIDIA's files) and the record of the pipelines.
+            Settings = Table(
+                "THIN=1", "JOIN_PARTS=8", "RELAY=2", "RELAY_COPY=1", "WIDE_BACK=1", "CARD_REHASH_RUNS=1",
+                "JOIN_COPIES=1", "CARD_STEPS=2", "CARD_AWAKE=1", "CARD_BUFFERS_MIN_KB=64", "INDIRECT_WINDOW=1",
+                "INDIRECT_BATCH=2", "UPLOAD_AHEAD=1", "SHOW_AFTER=1", "MAP_THREADS=1", "WC_NO_BACK=1",
+                "WC_NO_BACK_MIN_KB=1024", "SOFT_VIEWS=copies", "TEXTURE_POOL=1", "RIPE_BLOCKS=0", "TEXTURE_NO_WAIT=1",
+                "TEXTURE_CATCHUP=0", "TEXTURE_STAGE_MS=16", "LEVELS_ON_DEMAND=0", "PRELUDE_UPLOADS=1",
+                "SHOW_NEW_LATER=1", "POOL_SMALL=0", "TABLED_REREAD=1", "QUEUE_HOST_TEXTURES=0", "HEAP_SYNC_FIRST=1",
+                "SYNC_IN_PLACE=1", "SPANS_QUICK=1", "SYNC_FINE=1", "HEAP_SYNC_AT_SUBMIT=1", "AMBIENT=0.8",
+                "AMBIENT_AIR=1.5", "AMBIENT_SPECULAR=1", "EARLY_DEPTH=1",
+                "LEAVE_OUT=02384a60fda6f2d0,731a39171b568298", "FRAME_INTERVAL_US=1000"),
+            SeriesXSettings = Table("NATIVE_1440P=1"),
+            Note = "Settings of its own start for NVIDIA RTX: 2560x1440, no frame rate cap. DLSS and frame generation " +
+                   "are off, the launcher does not download NVIDIA's files. Its author measured with DLSS on an " +
+                   "RTX 5070 with 12 GB. The F1 menu opens, but cannot save here.",
+            SeriesSNote = "Its README: 1280x720 inside, faster and softer. The 2560x1440 setting is left out then, " +
+                          "the program only takes it for a Series X.",
         },
     ];
 

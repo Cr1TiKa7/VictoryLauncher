@@ -21,7 +21,7 @@ Games, Take-Two or Microsoft, nor with the authors of the forks.
 
 | Fork | Warmup | Settings |
 |------|--------|----------|
-| [AnyXboxX](https://github.com/LooperSalty/AnyXboxX) | yes (`shaders` with every archive and binary of the game: a count, from the second time a percentage; the pipeline step has nothing to build yet) | from `crates\anyxboxx\src\run\settings.rs`, they follow the updates |
+| [AnyXboxX](https://github.com/LooperSalty/AnyXboxX) | yes (`shaders` with every archive and binary of the game: a count, from the second time a percentage; the pipeline step has nothing to build yet) | from `crates\anyxboxx\src\run\settings.rs`, they follow the updates; on a Series X also the output size [chosen in the window](#output-size-anyxboxx) |
 | [klbf-lab](https://github.com/PastiiJay/klbf-lab) | yes (`translate`), with a percentage | from the README of the fork, without its Series S setup |
 | [Vice-Tay](https://github.com/TaynanGT/Vice-Tay) | yes (`shaders`: a count, from the second time a percentage; the pipeline step has nothing to build yet) | from its `play.ps1` (NVIDIA) |
 | [VIctory-7900XTX](https://github.com/avatarmanz/VIctory-7900XTX) | yes (`shaders`: a count, from the second time a percentage; the pipeline step has nothing to build yet) | from its `play.ps1`, tuned for AMD |
@@ -29,13 +29,16 @@ Games, Take-Two or Microsoft, nor with the authors of the forks.
 | [VItoriaBr](https://github.com/uiliannn/VItoriaBr) | yes (`warm`), without a percentage | its preset for 8 GB |
 | [victory-fork](https://github.com/fxceless/victory-fork) | no | `VICTORY_TEXTURE_BACK=1` |
 | [VIctory (DexNom)](https://github.com/DexNom/VIctory) | yes (`warm`), with a percentage | its experimental NVIDIA mode (ray tracing and FSR off), developed for AMD |
+| [VIctory-NVIDIA](https://github.com/trustno1-coder/VIctory-NVIDIA) | yes (`shaders`: a count, from the second time a percentage; the pipeline step has nothing to build yet) | from its `play.rs` (NVIDIA), 2560x1440, without DLSS and frame generation |
 
 The launcher reads the kind of warmup from the help of the built program. There is also
 "Own Git URL …" (`https://` only, a layout with `apps\victory` in the root or below `third_party\victory`, no special
 settings).
 
-Apart from AnyXboxX, the settings are a snapshot from 2026-11-26, meant for an NVIDIA card with 10 GB, as far as the
-fork allows it. The launcher cannot tell whether a fork shows a picture on your PC.
+Apart from AnyXboxX, the settings are a snapshot from 2026-11-26 (VIctory-NVIDIA: 2026-11-27), meant for an NVIDIA
+card with 10 GB, as far as the fork allows it. The output sizes offered for AnyXboxX and their default do not follow
+the updates either: they are taken from its own launcher on 2026-11-27. The launcher cannot tell whether a fork shows
+a picture on your PC.
 
 ## What the launcher does
 
@@ -54,29 +57,43 @@ fork allows it. The launcher cannot tell whether a fork shows a picture on your 
 - **Driver cache:** It does not manage the shader cache of the graphics driver. What the pipeline step of AnyXboxX,
   Vice-Tay and VIctory-7900XTX builds is only kept there.
 
+## Output size (AnyXboxX)
+
+With AnyXboxX a second list next to **Start game** sets the size the game is asked to put out: 1280x720, **1920x1080**
+(the default, as in the launcher of AnyXboxX), 2560x1440, or the title's own, which is 3840x2160 with the settings a
+Series X wrote and is what the launcher did before there was this list. A smaller size looks softer and should run
+faster; the author of AnyXboxX reports about 20 fps at 3840x2160 against 24 to 30 at 1920x1080 on an RTX 4070 SUPER,
+which this launcher has not measured. AnyXboxX changes two places in the title's code for it when the game starts and
+leaves them alone if their bytes are not the expected ones. Changing the size asks for no new warmup. The game has not
+been started with this list yet.
+
 ## Console: Series X or Series S
 
 The list next to **Start game** sets which console the game sees, for each fork on its own. **Series X** is what every
-built in fork does by itself and the default; the launcher then starts the game as before. With **Series S** it adds
-`--console series-s` to the start of the game. The warmup is not changed.
+built in fork does by itself and the default; the launcher then names no console. With **Series S** it adds
+`--console series-s` to the start of the game. The warmup is not changed. Two things are only set for a Series X: the
+2560x1440 setting of VIctory-NVIDIA, whose program does not start as a Series S with it, and the output size of
+AnyXboxX, whose own launcher has no Series S.
 
-With Series S the launcher shows below what is known about the fork, taken from its own files on 2026-11-26 (in a
-small window the note may only be visible as the tooltip of the list). The authors disagree: some describe it as
-lighter and faster, one fork's table shows it slower than Series X with 1080p output, and a tester of another got a
-black picture. klbf-lab would need AMD's FidelityFX SDK for it, which the launcher does not pass on to the game. The
-game has not been started as a Series S with this launcher.
+With Series S the launcher shows below what is known about the fork, taken from its own files on 2026-11-26
+(VIctory-NVIDIA: 2026-11-27; in a small window the note may only be visible as the tooltip of the list). The authors
+disagree: some describe it as lighter and faster, one fork's table shows it slower than Series X with 1080p output,
+and a tester of another got a black picture. klbf-lab would need AMD's FidelityFX SDK for it, which the launcher does
+not pass on to the game. The game has not been started as a Series S with this launcher.
 
 ## Keyboard controls
 
 **CONTROLS** next to **Start game** shows which key stands in for which input of the controller with the chosen fork.
-The keys only count while the game window has the focus and no controller is connected.
+The keys only count while the game window has the focus and no controller is connected. With VIctory-NVIDIA they
+also count while a controller is connected.
 
 All built in forks except AnyXboxX use the same keys, by the letter on the key. AnyXboxX goes by the place of a key on
 the keyboard, so the launcher names its keys as your keyboard layout has them. On a German keyboard, for example, LT is
 the key labelled `Y` with AnyXboxX and the key labelled `Z` with the others.
 
-The tables are written into the launcher (a snapshot from 2026-11-26): a fork that changes its keys is shown wrong
-until the launcher follows. For an own Git URL the usual table is shown, not checked for that fork.
+The tables are written into the launcher (a snapshot from 2026-11-26, VIctory-NVIDIA: 2026-11-27): a fork that changes
+its keys is shown wrong until the launcher follows. For an own Git URL the usual table is shown, not checked for that
+fork.
 
 ## Updates of the launcher
 
