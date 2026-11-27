@@ -91,16 +91,28 @@ not pass on to the game. The game has not been started as a Series S with this l
 ## Keyboard controls
 
 **CONTROLS** next to **Start game** shows which key stands in for which input of the controller with the chosen fork.
-The keys only count while the game window has the focus and no controller is connected. With VIctory-NVIDIA they
-also count while a controller is connected.
+The keys only count while the game window has the focus. With every built in fork except AnyXboxX and VIctory-NVIDIA,
+no controller may be connected either.
 
 All built in forks except AnyXboxX use the same keys, by the letter on the key. AnyXboxX goes by the place of a key on
 the keyboard, so the launcher names its keys as your keyboard layout has them. On a German keyboard, for example, LT is
 the key labelled `Y` with AnyXboxX and the key labelled `Z` with the others.
 
-The tables are written into the launcher (a snapshot from 2026-11-26, VIctory-NVIDIA: 2026-11-27): a fork that changes
-its keys is shown wrong until the launcher follows. For an own Git URL the usual table is shown, not checked for that
-fork.
+AnyXboxX also has these, and takes keyboard and mouse while a controller is connected:
+
+| Input of the controller | In addition to its letter keys |
+|-------------------------|--------------------------------|
+| Right stick | mouse movement |
+| LT (aim; in a vehicle brake and reverse) | Left Shift or the right mouse button |
+| RT (fire; in a vehicle accelerate) | Space or the left mouse button |
+
+The mouse counts once you have clicked into the game's picture or pressed F9. That click does not fire. Pressing F9
+again or leaving the window gives the mouse back. F11 or Alt+Enter switches between full screen and a window, as with
+Vice-Tay.
+
+The tables are written into the launcher (a snapshot from 2026-11-26, AnyXboxX and VIctory-NVIDIA from 2026-11-27): a
+fork that changes its keys is shown wrong until the launcher follows. For an own Git URL the usual table is shown, not
+checked for that fork.
 
 ## Updates of the launcher
 

@@ -29,6 +29,9 @@ darunter. Er ist immer bedienbar, auch während Warmup und Spiel, nur nicht beim
   Der Launcher fragt Windows mit demselben Aufruf wie die Runtime, welche Taste an der Position liegt. Zusätzlich
   Shift = L3, Strg = R3 und die Maus. Der Launcher gibt `VICTORY_KEYBOARD` nicht weiter, daher gilt dieser Standard.
   Nachtrag: Seit der zusammengeführten Basis von AnyXboxX (04a08f5) gibt es Shift, Strg und Maus nicht mehr.
+  Nachtrag 2026-11-27 (AnyXboxX b62053f): Die Maus ist zurück (401953e), dazu Leertaste = RT und linke
+  Umschalttaste = LT (9051b5d). Tastatur und Maus zählen auch mit angeschlossenem Controller. F11 oder Alt+Enter
+  wechselt auch hier den Vollbildmodus.
 - Eigene Git-URL: Standardtabelle mit dem Hinweis, dass sie für diesen Fork nicht geprüft ist.
 - Hinweise: Tasten zählen nur, wenn das Spielfenster den Fokus hat und kein Controller verbunden ist (DexNom: auch
   kein DualSense am Kabel). Vice-Tay: F11 oder Alt+Enter wechselt den Vollbildmodus.

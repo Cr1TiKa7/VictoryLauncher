@@ -62,9 +62,9 @@ public class KeyBindingsTests
     {
         var rows = KeyBindings.Rows(KeyScheme.ByPosition, German);
 
-        Assert.Equal("Y", KeysFor(rows, "LT"));
+        Assert.Equal("Y, Left Shift or right mouse button", KeysFor(rows, "LT"));
         Assert.Equal("Z", KeysFor(rows, "Y"));
-        Assert.Equal("C", KeysFor(rows, "RT"));
+        Assert.Equal("C, Space or left mouse button", KeysFor(rows, "RT"));
     }
 
     [Fact]
@@ -77,9 +77,23 @@ public class KeyBindingsTests
     }
 
     [Fact]
-    public void By_position_the_table_has_the_inputs_of_the_standard_one_and_no_others()
+    public void By_position_only_the_right_stick_and_the_triggers_have_more_than_the_standard_keys()
     {
-        Assert.Equal(KeyBindings.Rows(KeyScheme.Standard, Qwerty), KeyBindings.Rows(KeyScheme.ByPosition, Qwerty));
+        var standard = KeyBindings.Rows(KeyScheme.Standard, Qwerty);
+        var byPosition = KeyBindings.Rows(KeyScheme.ByPosition, Qwerty);
+
+        Assert.Equal(standard.Select(row => row.Pad), byPosition.Select(row => row.Pad));
+        Assert.Equal(["Right stick", "LT", "RT"], byPosition.Except(standard).Select(row => row.Pad));
+        Assert.Equal("I J K L or mouse", KeysFor(byPosition, "Right stick"));
+    }
+
+    [Fact]
+    public void Space_and_left_shift_are_not_looked_up_in_the_keyboard_layout()
+    {
+        var rows = KeyBindings.Rows(KeyScheme.ByPosition, _ => "?");
+
+        Assert.Equal("?, Left Shift or right mouse button", KeysFor(rows, "LT"));
+        Assert.Equal("?, Space or left mouse button", KeysFor(rows, "RT"));
     }
 
     [Fact]
@@ -119,19 +133,39 @@ public class KeyBindingsTests
         Assert.DoesNotContain("DualSense", NotesOf("vitoriabr"));
     }
 
-    [Fact]
-    public void Vice_tay_names_its_full_screen_keys()
+    [Theory]
+    [InlineData("anyxboxx")]
+    [InlineData("vice-tay")]
+    public void The_forks_with_full_screen_keys_name_them(string id)
     {
-        Assert.Contains("F11", NotesOf("vice-tay"));
+        Assert.Contains("F11 or Alt+Enter", NotesOf(id));
         Assert.DoesNotContain("F11", NotesOf("victory-7900xtx"));
     }
 
     [Fact]
-    public void Anyxboxx_names_no_mouse_since_its_combined_base_and_says_that_keys_go_by_place()
+    public void Anyxboxx_says_that_keys_go_by_place()
     {
         Assert.Contains("place on the keyboard", NotesOf("anyxboxx"));
-        Assert.DoesNotContain("ouse", NotesOf("anyxboxx"));
-        Assert.DoesNotContain("F9", NotesOf("anyxboxx"));
+        Assert.DoesNotContain("place on the keyboard", NotesOf("vice-tay"));
+    }
+
+    [Fact]
+    public void Anyxboxx_explains_how_to_take_and_give_back_the_mouse()
+    {
+        var notes = NotesOf("anyxboxx");
+
+        Assert.Contains("click into the game's picture or press F9", notes);
+        Assert.Contains("That click does not fire", notes);
+        Assert.Contains("F9 again or leaving the window gives it back", notes);
+        Assert.DoesNotContain("F9", NotesOf("dexnom"));
+    }
+
+    [Fact]
+    public void Only_anyxboxx_takes_the_keyboard_beside_a_connected_controller()
+    {
+        Assert.Contains("also while a controller is connected", NotesOf("anyxboxx"));
+        Assert.DoesNotContain("no controller is connected", NotesOf("anyxboxx"));
+        Assert.Contains("no controller is connected", NotesOf("vice-tay"));
     }
 
     [Fact]

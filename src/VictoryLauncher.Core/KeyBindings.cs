@@ -7,7 +7,10 @@ public enum KeyScheme
 {
     /// <summary>By their virtual key: the key that carries the letter.</summary>
     Standard,
-    /// <summary>By their place on a QWERTY keyboard, whatever is printed there (AnyXboxX).</summary>
+    /// <summary>
+    /// By their place on a QWERTY keyboard, whatever is printed there (AnyXboxX, which also has the mouse, Space and
+    /// Left Shift).
+    /// </summary>
     ByPosition,
 }
 
@@ -15,8 +18,9 @@ public enum KeyScheme
 public sealed record PadKey(string Pad, string Keys);
 
 /// <summary>
-/// The keyboard pad of the forks, as their `gameinput.rs` (and `keymap.rs` of AnyXboxX) had it on 2026-11-26. It is
-/// written down here, so a fork that changes its keys is shown wrong until this table follows.
+/// The keyboard pad of the forks, as their `gameinput.rs` had it on 2026-11-26, that of AnyXboxX (with its
+/// `keymap.rs` and `mouse.rs`) on 2026-11-27. It is written down here, so a fork that changes its keys is shown wrong
+/// until this table follows.
 /// </summary>
 public static class KeyBindings
 {
@@ -26,19 +30,24 @@ public static class KeyBindings
         var byPosition = scheme == KeyScheme.ByPosition;
         string Letters(string qwerty) =>
             string.Join(' ', qwerty.Select(letter => byPosition ? keyAt(letter) : letter.ToString()));
+        string WithMouse(string keys) => byPosition ? $"{keys} or mouse" : keys;
+        // Space and Left Shift are found by their virtual key, the same on every layout
+        string Trigger(char letter, string key, string button) => byPosition
+            ? $"{Letters(letter.ToString())}, {key} or {button} mouse button"
+            : Letters(letter.ToString());
 
         return
         [
             new("Left stick", Letters("WASD")),
-            new("Right stick", Letters("IJKL")),
+            new("Right stick", WithMouse(Letters("IJKL"))),
             new("A", "Enter"),
             new("B", "Backspace"),
             new("X", Letters("X")),
             new("Y", Letters("Y")),
             new("LB", Letters("Q")),
             new("RB", Letters("E")),
-            new("LT", Letters("Z")),
-            new("RT", Letters("C")),
+            new("LT", Trigger('Z', "Left Shift", "right")),
+            new("RT", Trigger('C', "Space", "left")),
             new("Left stick click (L3)", Letters("F")),
             new("Right stick click (R3)", Letters("H")),
             new("D-pad", "Arrow keys"),
@@ -51,18 +60,25 @@ public static class KeyBindings
     public static IReadOnlyList<string> Notes(ForkProfile fork)
     {
         var pad = fork.Id == "dexnom" ? "controller (also no DualSense on a cable)" : "controller";
+        var byPosition = fork.Keys == KeyScheme.ByPosition;
         var notes = new List<string>
         {
-            fork.KeysNextToController
-                ? "The keys only count while the game window has the focus, also while a controller is connected."
-                : $"The keys only count while the game window has the focus and no {pad} is connected.",
+            byPosition
+                // its one stand-in pad is merged with every connected one
+                ? "Keyboard and mouse only count while the game window has the focus, also while a controller is " +
+                  "connected."
+                : fork.KeysNextToController
+                    ? "The keys only count while the game window has the focus, also while a controller is connected."
+                    : $"The keys only count while the game window has the focus and no {pad} is connected.",
         };
-        if (fork.Keys == KeyScheme.ByPosition)
+        if (byPosition)
         {
             notes.Add("The letters go by their place on the keyboard. They are named as your current keyboard layout " +
                       "has them.");
+            notes.Add("Mouse: click into the game's picture or press F9 to use it. That click does not fire. Pressing " +
+                      "F9 again or leaving the window gives it back.");
         }
-        if (fork.Id == "vice-tay")
+        if (fork.Id is "anyxboxx" or "vice-tay")
             notes.Add("F11 or Alt+Enter switches between full screen and a window.");
         if (fork.Id == "victory-nvidia")
             notes.Add("F1 opens its settings menu, F3 the stats panel.");
