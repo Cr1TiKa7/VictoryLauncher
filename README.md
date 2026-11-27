@@ -34,6 +34,13 @@ The launcher reads the kind of warmup from the help of the built program. There 
 "Own Git URL …" (`https://` only, a layout with `apps\victory` in the root or below `third_party\victory`, no special
 settings).
 
+With AnyXboxX the worker pools depend on the processor, as with `anyxboxx run`: PCs with many logical CPUs get larger
+ones (at the moment from 16, with more landing threads from 24). The sizes and both limits come from `settings.rs` and
+follow the updates. The rule that picks between them is written into the launcher. If it cannot read these tables
+completely, or finds one it does not know, it says so and starts neither the warmup nor the game. As with
+`anyxboxx run`, the environment variable `ANYXBOXX_LOGICAL_CPUS` (a positive whole number, set before the launcher
+starts) takes the place of the number of logical CPUs.
+
 Apart from AnyXboxX, the settings are a snapshot from 2026-11-26, meant for an NVIDIA card with 10 GB, as far as the
 fork allows it. The launcher cannot tell whether a fork shows a picture on your PC.
 

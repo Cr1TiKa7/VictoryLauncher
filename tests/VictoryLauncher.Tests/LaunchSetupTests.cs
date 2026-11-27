@@ -315,6 +315,40 @@ public class LaunchSetupTests : IDisposable
         Assert.Equal("2", settings["VICTORY_RELAY"]);
     }
 
+    // What warmup, game and the warmup hint read: sets the variable of this test process for the time of the test.
+    [Fact]
+    public void Settings_follow_the_cpu_count_and_the_settings_of_the_fork_still_win()
+    {
+        var setup = ValidSetup();
+        setup = setup with
+        {
+            Fork = setup.Fork with
+            {
+                Settings = new Dictionary<string, string> { ["VICTORY_UNDER_THREADS"] = "3" },
+            },
+        };
+        File.WriteAllText(Path.Combine(setup.RepoDir, "crates", "anyxboxx", "src", "run", "settings.rs"), """
+            pub const TUNED: &[(&str, &str)] = &[("VICTORY_UNDER_THREADS", "6"), ("VICTORY_LAND_THREADS", "4")];
+            pub const BIG_CPU_THRESHOLD: usize = 16;
+            const BIG_POOLS: &[(&str, &str)] = &[("VICTORY_UNDER_THREADS", "8"), ("VICTORY_LAND_THREADS", "6")];
+            """);
+        var before = Environment.GetEnvironmentVariable("ANYXBOXX_LOGICAL_CPUS");
+        try
+        {
+            Environment.SetEnvironmentVariable("ANYXBOXX_LOGICAL_CPUS", "8");
+            var small = setup.ReadSettings();
+            Environment.SetEnvironmentVariable("ANYXBOXX_LOGICAL_CPUS", "32");
+            var big = setup.ReadSettings();
+
+            Assert.Equal(("3", "4"), (small["VICTORY_UNDER_THREADS"], small["VICTORY_LAND_THREADS"]));
+            Assert.Equal(("3", "6"), (big["VICTORY_UNDER_THREADS"], big["VICTORY_LAND_THREADS"]));
+        }
+        finally
+        {
+            Environment.SetEnvironmentVariable("ANYXBOXX_LOGICAL_CPUS", before);
+        }
+    }
+
     [Fact]
     public void A_fork_without_a_tuning_file_uses_its_fixed_settings()
     {
