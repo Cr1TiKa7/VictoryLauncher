@@ -175,6 +175,25 @@ nach durch sind:
 Bei Ja gilt die Änderung für beide Forks, gemessen ist dann nur Vice-Tay. Ob es weniger ruckelt, kann der Launcher
 nicht messen. Das zeigt sich nur beim Spielen.
 
+### Nachtrag 2026-11-27: AnyXboxX gehört dazu
+
+Seit der zusammengeführten Basis hat AnyXboxX dieselben zwei Schritte wie Vice-Tay und meldet aus demselben Grund
+`0 pipelines known`. Freigegeben ist deshalb, abweichend von oben:
+
+- **Forks:** AnyXboxX, Vice-Tay und VIctory-7900XTX bekommen die Aufzeichnung. Bei AnyXboxX ist sie ein Zusatz des
+  Launchers zu den Werten aus `settings.rs`. VIctory-7900XTX wurde dafür nicht neu gelesen und ist ungetestet.
+- **Messung:** Die Bedingungen 2 bis 5 gelten für AnyXboxX statt für Vice-Tay. Bei Ja gilt die Änderung für alle drei,
+  gemessen ist dann nur AnyXboxX.
+- **Bedingung 1:** Der Treiber-Cache ist schon verlegt. Offen ist nur die Prüfung der Shader-Cache-Größe.
+- **Abbrechen:** Ein abgebrochener Lauf mit **Rebuild all pipelines** macht nicht dort weiter, `--again` beginnt von
+  vorn. Der Status sagt das.
+- **Fingerabdruck von `warm`:** Er besteht aus Übersetzer-Einstellungen und Treiberversion. Ein Update des Forks baut
+  deshalb nicht von selbst alles neu. Das gilt auch, wenn sich der Übersetzer ändert, ohne seine Versionsnummer zu
+  erhöhen (Stand AnyXboxX `5a08a33`). Dafür ist das Häkchen da.
+- **Ergebnis der Messung:** `warm` läuft durch, im Shader-Cache des NVIDIA-Treibers war aber keine Änderung zu sehen,
+  und dieselben Pipelines brauchten beim zweiten Bauen genauso lange. Ein Nutzen ist damit nicht gezeigt. Die Stufe
+  wird trotzdem auf Wunsch veröffentlicht, die README sagt das.
+
 ## Prüfen
 
 - Tests vor dem Code. Die Beispielzeilen werden aus den Formatzeilen des Quelltexts gebildet, mit Fork und Commit im

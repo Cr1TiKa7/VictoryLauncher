@@ -150,6 +150,7 @@ public partial class MainWindow : Window
         ShowConsoleNote();
         OutputBox.SelectedIndex = OutputSize.Choices.ToList().IndexOf(OutputSize.Of(State.OutputSize));
         ShowOutputSize();
+        RebuildBox.IsChecked = false;
         GameBox.Text = _settings.GameDir;
         CacheBox.Text = typing ? "" : setup.CacheDir;
         RepoBox.Text = typing ? "" : setup.RepoDir;
@@ -534,7 +535,8 @@ public partial class MainWindow : Window
 
         var setup = Setup;
         var kind = CheckedWarm() ?? WarmKind.None;
-        var steps = WarmPlan.Steps(kind, setup.GameDir, setup.Fork.WarmsEveryGameFile);
+        var rebuild = kind == WarmKind.ShadersThenPipelines && RebuildBox.IsChecked == true;
+        var steps = WarmPlan.Steps(kind, setup.GameDir, setup.Fork.WarmsEveryGameFile, rebuild);
         if (steps.Count == 0)
         {
             StatusText.Text = WarmPlan.About(WarmKind.None);
@@ -600,14 +602,13 @@ public partial class MainWindow : Window
                 LastWarmTotal = verdicts.Select(verdict => verdict.RememberTotal).FirstOrDefault(total => total is not null),
             });
             SaveSettings();
+            RebuildBox.IsChecked = false;
             ShowHint();
         }
         catch (OperationCanceledException)
         {
             EndWarmDisplay(null);
-            StatusText.Text = kind == WarmKind.GameFiles
-                ? "Warmup cancelled. The pipeline library was not saved, please repeat the warmup later."
-                : "Warmup cancelled, please repeat it later.";
+            StatusText.Text = WarmPlan.CancelledText(kind, rebuild);
         }
         finally
         {
@@ -783,7 +784,7 @@ public partial class MainWindow : Window
         foreach (var control in new Control[] { ForkBox, UrlBox, AddUrlButton, RemoveForkButton, GameBox, GameBrowse, UpdateButton })
             control.IsEnabled = idle;
         var forkChosen = idle && !TypingUrl;
-        foreach (var control in new Control[] { CheckButton, PlayButton, ConsoleBox, CacheBox, RepoBox, CacheBrowse, RepoBrowse })
+        foreach (var control in new Control[] { CheckButton, PlayButton, ConsoleBox, RebuildBox, CacheBox, RepoBox, CacheBrowse, RepoBrowse })
             control.IsEnabled = forkChosen;
         WarmButton.IsEnabled = forkChosen && CheckedWarm() != WarmKind.None;
         OutputBox.IsEnabled = forkChosen && !State.SeriesS;
@@ -840,13 +841,18 @@ public partial class MainWindow : Window
 
     private void ShowHint()
     {
-        if (TypingUrl || CheckedWarm() is not { } kind)
+        var checkedKind = TypingUrl ? null : CheckedWarm();
+        RebuildBox.Visibility = checkedKind == WarmKind.ShadersThenPipelines && _fork.RecordsPipelines
+            ? Visibility.Visible
+            : Visibility.Collapsed;
+        if (checkedKind is not { } kind)
         {
             HintText.Text = "";
             return;
         }
         var hint = kind == WarmKind.None ? "" : WarmState.Hint(State, Fingerprint());
-        HintText.Text = string.Join(" ", new[] { hint, WarmPlan.About(kind) }.Where(part => part.Length > 0));
+        HintText.Text = string.Join(" ",
+            new[] { hint, WarmPlan.About(kind, _fork.RecordsPipelines) }.Where(part => part.Length > 0));
     }
 
     /// <returns>Null while it cannot be told: before the first check of this fork and checkout.</returns>

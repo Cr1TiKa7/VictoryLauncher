@@ -34,6 +34,11 @@ public sealed record ForkProfile
     /// </summary>
     public bool WarmsEveryGameFile { get; init; }
 
+    /// <summary>With the value 1 the game writes down every pipeline it creates, which is what `warm` builds.</summary>
+    public const string PipelineBookSwitch = "VICTORY_PIPELINE_BOOK";
+
+    public bool RecordsPipelines => Settings.TryGetValue(PipelineBookSwitch, out var value) && value == "1";
+
     /// <summary>A file in the checkout with the VICTORY_* tables; read again after every update.</summary>
     public string? TuningFile { get; init; }
 
@@ -70,6 +75,7 @@ public sealed record ForkProfile
 /// <summary>
 /// The built in forks and the profile for an own URL. Their settings are a snapshot of 2026-11-26 (VIctory-NVIDIA:
 /// 2026-11-27), taken from each fork's start script or README and fitted to a graphics card with 10 GB.
+/// PIPELINE_BOOK is the launcher's own addition.
 /// </summary>
 public static partial class ForkCatalog
 {
@@ -86,6 +92,8 @@ public static partial class ForkCatalog
             WarmsEveryGameFile = true, OwnDataDir = false, Keys = KeyScheme.ByPosition,
             // Its own launcher has this choice too. That one has no Series S, so a Series S is left as it was.
             ChoosesOutputSize = true,
+            // not part of its tables: it records what the pipeline step of the warmup builds
+            Settings = Table("PIPELINE_BOOK=1"),
             Note = "Settings from crates\\anyxboxx\\src\\run\\settings.rs (the values of \"anyxboxx run\"), " +
                    "they follow the updates.",
             SeriesSNote = "Its runtime README: about 5 ms a frame faster, a softer picture (measured on AMD). " +
@@ -109,7 +117,7 @@ public static partial class ForkCatalog
                 "AMBIENT=0.8", "D3D12_DRED=light", "SKIP_PIPELINES=none",
                 "THIN_THREADS=12", "UNDER_THREADS=8", "LAND_THREADS=6", "MAP_THREADS=auto", "PLACED_ORDER=1",
                 "WAVE_WIDE_ONLY=6f225b641c5b0708,5dc3b25986622949,369cbe906ea72764,2cc4c197ee29e291",
-                "THIN=1", "JOIN_PARTS=8", "UPLOAD_AHEAD=1", "INDIRECT_BATCH=2", "FULLSCREEN=1"),
+                "THIN=1", "JOIN_PARTS=8", "UPLOAD_AHEAD=1", "INDIRECT_BATCH=2", "FULLSCREEN=1", "PIPELINE_BOOK=1"),
             Note = "Settings from its play.ps1 for NVIDIA (measured on an RTX 4090 with 16 cores). " +
                    "Full screen, F11 switches to a window. The author expects plenty of RAM.",
             SeriesSNote = "Its author plays all sessions on Series S. Its README: a smaller picture, lighter on " +
@@ -123,7 +131,7 @@ public static partial class ForkCatalog
                 "TEXTURE_NO_WAIT=1", "RELAY=2", "WIDE_BACK=1", "CARD_REHASH_RUNS=1", "JOIN_COPIES=1",
                 "INDIRECT_WINDOW=1", "RELAY_COPY=1", "CARD_STEPS=2", "INDIRECT_BATCH=2", "MAP_THREADS=1",
                 "TITLE_PRIORITIES=0", "CARD_AWAKE=1", "SHOW_AFTER=1", "AMBIENT=0.8", "D3D12_DRED=light",
-                "THIN=1", "JOIN_PARTS=8", "UPLOAD_AHEAD=1"),
+                "THIN=1", "JOIN_PARTS=8", "UPLOAD_AHEAD=1", "PIPELINE_BOOK=1"),
             Note = "Tuned for an AMD RX 7900 XTX. The author has not measured it on NVIDIA.",
             SeriesSNote = "Its README calls Series S about 5 ms a frame faster, but one of its tables shows it " +
                           "slower than Series X with 1080p output (measured on AMD).",
