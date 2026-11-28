@@ -193,6 +193,11 @@ Seit der zusammengeführten Basis hat AnyXboxX dieselben zwei Schritte wie Vice-
 - **Ergebnis der Messung:** `warm` läuft durch, im Shader-Cache des NVIDIA-Treibers war aber keine Änderung zu sehen,
   und dieselben Pipelines brauchten beim zweiten Bauen genauso lange. Ein Nutzen ist damit nicht gezeigt. Die Stufe
   wird trotzdem auf Wunsch veröffentlicht, die README sagt das.
+- **Spätere Messung, nach einem Treiberupdate und Neustart:** Der zweite Bau war schneller, die ersten 2.000 Pipelines
+  in 9 statt 265 s, ein späterer Abschnitt in etwa der halben Zeit. Gewachsen ist der Direct3D-Shader-Cache von Windows
+  (`%LOCALAPPDATA%\D3DSCache`). Warum die erste Messung anders ausfiel, ist nicht bekannt. Nach einem Fork-Update mit
+  geändertem Pipeline-Code begann der Warmup wieder bei null und war so langsam wie beim ersten Mal. Ob das Spiel
+  weniger ruckelt, ist weiterhin nicht gemessen.
 
 ## Prüfen
 

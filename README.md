@@ -61,11 +61,19 @@ forks do not switch it on themselves.
   graphics driver still has it, so use it for example after the shader cache of the driver was cleared. A cancelled
   rebuild starts over.
 
-**It is not shown that this helps.** It was measured once, with AnyXboxX on one PC with an RTX 3080: 3,000 pipelines
-that had never been built took 75 seconds, and 2,418 pipelines the game had drawn with took 4 minutes. Building those
-a second time took just as long, and no change was seen in the shader cache of the graphics driver. With 83,561
-recorded pipelines, building them all takes more than half an hour by that measure. Whether the game stutters less has
-not been measured.
+**It is not shown that the game runs smoother with this.** Whether it stutters less has not been measured. Measured was
+only the warmup itself, with AnyXboxX on one PC with an RTX 3080, and the results differ:
+
+- In a first measurement, building the same pipelines a second time took just as long.
+- In a later one, after a graphics driver update and a restart, the second build was faster: 9 seconds instead of 265
+  for the first 2,000 pipelines, and about half the time for a later part. Why the first measurement differed is not
+  known.
+- A fork update can take that gain away. After one that changed the pipeline code, the warmup began again with nothing
+  made, and the first 2,000 pipelines took 290 seconds.
+
+Building everything takes long: with 83,561 recorded pipelines plan more than half an hour. In the later measurements
+the data grew in the Direct3D shader cache of Windows (`%LOCALAPPDATA%\D3DSCache`, usually on drive C:), by about
+0.5 GB for the first 4,500 pipelines. All of them may need several GB there.
 
 ## What the launcher does
 

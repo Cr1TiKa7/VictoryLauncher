@@ -109,6 +109,8 @@ public class PipelineRecordingTests
         var text = WarmPlan.CancelledText(WarmKind.ShadersThenPipelines, rebuild: true);
 
         Assert.DoesNotContain("goes on", text);
-        Assert.Contains("Rebuild all pipelines", text);
+        // the box is still ticked after a cancel, a click on it would take the tick out
+        Assert.DoesNotContain("tick Rebuild all pipelines", text);
+        Assert.Contains("Rebuild all pipelines ticked", text);
     }
 }
