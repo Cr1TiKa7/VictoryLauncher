@@ -142,7 +142,7 @@ public static class WarmPlan
             "Warmup cancelled. The pipeline library was not saved, please repeat the warmup later.",
         // `warm` writes down every pipeline as soon as it is made, and `--again` skips none of those
         WarmKind.ShadersThenPipelines when rebuild =>
-            "Warmup cancelled. A rebuild starts over: tick Rebuild all pipelines again to finish it.",
+            "Warmup cancelled. A rebuild starts over: to finish it, warm up again with Rebuild all pipelines ticked.",
         WarmKind.ShadersThenPipelines => "Warmup cancelled. The next one goes on where this one stopped.",
         _ => "Warmup cancelled, please repeat it later.",
     };
